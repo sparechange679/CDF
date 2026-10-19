@@ -1,0 +1,414 @@
+:root {
+    --malawi-black: #111111;
+    --malawi-red: #c8102e;
+    --malawi-green: #006b3f;
+    --gov-gray: #f8f9fa;
+    --text-dark: #1a1a1a;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #f4f6f8;
+    color: var(--text-dark);
+    line-height: 1.6;
+}
+
+.gov-topbar {
+    background: var(--malawi-black);
+    color: white;
+    font-size: 0.85rem;
+    padding: 6px 0;
+}
+.gov-topbar a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+}
+.gov-topbar a:hover {
+    color: white;
+}
+
+.navbar {
+    background: white;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 0.75rem 0;
+}
+.navbar-brand {
+    font-weight: 700;
+    color: var(--malawi-black) !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.navbar-brand img {
+    height: 42px;
+}
+.nav-link {
+    color: #333 !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+.nav-link:hover,
+.nav-link.active {
+    color: var(--malawi-red) !important;
+    background: rgba(200,16,46,0.06);
+}
+.btn-login {
+    background: var(--malawi-red);
+    color: white !important;
+    border-radius: 6px;
+    padding: 0.45rem 1.2rem !important;
+    font-weight: 600;
+}
+.btn-login:hover {
+    background: #a50d22;
+    color: white !important;
+}
+
+.hero {
+    background: linear-gradient(135deg, rgba(17,17,17,0.85), rgba(0,107,63,0.75)),
+                url('https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+    color: white;
+    padding: 100px 0 90px;
+    position: relative;
+}
+.hero h1 {
+    font-weight: 700;
+    font-size: 2.6rem;
+    margin-bottom: 1rem;
+}
+.hero .lead {
+    font-size: 1.2rem;
+    opacity: 0.95;
+    max-width: 680px;
+}
+.hero-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    display: inline-block;
+    margin-bottom: 1.2rem;
+}
+
+.page-hero {
+    background: linear-gradient(135deg, rgba(17,17,17,0.88), rgba(0,107,63,0.72)),
+                url('https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+    color: white;
+    padding: 56px 0 48px;
+}
+.page-hero h1 {
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+.page-hero p {
+    opacity: 0.92;
+    margin-bottom: 0;
+    max-width: 640px;
+}
+.breadcrumb-gov {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 0.75rem;
+}
+.breadcrumb-gov .breadcrumb-item,
+.breadcrumb-gov .breadcrumb-item a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+.breadcrumb-gov .breadcrumb-item.active {
+    color: white;
+}
+.breadcrumb-gov .breadcrumb-item + .breadcrumb-item::before {
+    color: rgba(255,255,255,0.5);
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.75rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    transition: transform 0.25s;
+    height: 100%;
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    color: white;
+}
+.stat-icon.green { background: var(--malawi-green); }
+.stat-icon.red { background: var(--malawi-red); }
+.stat-icon.blue { background: #0d6efd; }
+.stat-icon.orange { background: #fd7e14; }
+
+.section-header {
+    margin-bottom: 2.5rem;
+}
+.section-header h2 {
+    font-weight: 700;
+    color: var(--malawi-black);
+}
+.section-header p {
+    color: #666;
+    max-width: 600px;
+    margin: 0.5rem auto 0;
+}
+
+.project-card {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    height: 100%;
+    border: 1px solid #eef0f2;
+}
+.project-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+}
+.project-card img {
+    height: 190px;
+    object-fit: cover;
+    width: 100%;
+}
+.project-body {
+    padding: 1.35rem;
+}
+.status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 50px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.status-approved { background: #e6f4ea; color: var(--malawi-green); }
+.status-proposed { background: #fff3e0; color: #e65100; }
+.status-progress { background: #e3f2fd; color: #1565c0; }
+.status-completed { background: #e8f5e9; color: #2e7d32; }
+
+.progress {
+    height: 7px;
+    border-radius: 10px;
+    background: #e9ecef;
+}
+.progress-bar {
+    border-radius: 10px;
+}
+
+.meta-info {
+    font-size: 0.85rem;
+    color: #666;
+}
+.meta-info i {
+    color: var(--malawi-green);
+    margin-right: 4px;
+}
+
+.how-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.75rem;
+    text-align: center;
+    height: 100%;
+    border: 1px solid #eef0f2;
+}
+.how-number {
+    width: 48px;
+    height: 48px;
+    background: var(--malawi-red);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin: 0 auto 1rem;
+    font-size: 1.2rem;
+}
+
+.feedback-card {
+    background: white;
+    border-radius: 14px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid #eef0f2;
+}
+
+.filter-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid #eef0f2;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+    margin-bottom: 2rem;
+}
+
+.vote-stat-bar {
+    height: 10px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.vote-stat-bar .fill {
+    height: 100%;
+    background: var(--malawi-red);
+    border-radius: 10px;
+    transition: width 0.4s ease;
+}
+
+.vote-count {
+    font-weight: 700;
+    color: var(--malawi-red);
+}
+
+.timeline {
+    position: relative;
+    padding-left: 28px;
+}
+.timeline::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: #e2e6ea;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.25rem;
+}
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -24px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--malawi-green);
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--malawi-green);
+}
+.timeline-item.pending::before {
+    background: #adb5bd;
+    box-shadow: 0 0 0 2px #adb5bd;
+}
+
+.login-wrap {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+}
+
+.alert-gov {
+    border-radius: 10px;
+    border: none;
+}
+
+footer {
+    background: var(--malawi-black);
+    color: rgba(255,255,255,0.85);
+    padding: 3.5rem 0 1.5rem;
+    margin-top: 5rem;
+}
+footer h5 {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    font-size: 1rem;
+}
+footer a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+footer a:hover {
+    color: white;
+}
+.footer-bottom {
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.6);
+}
+
+.btn-cdf {
+    background: var(--malawi-red);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.55rem 1.4rem;
+    transition: all 0.2s;
+}
+.btn-cdf:hover {
+    background: #a50d22;
+    color: white;
+}
+.btn-cdf:disabled {
+    background: #adb5bd;
+    color: white;
+}
+.btn-outline-gov {
+    border: 1.5px solid #333;
+    color: #333;
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.2rem;
+}
+.btn-outline-gov:hover {
+    background: #333;
+    color: white;
+}
+
+.bg-light-gov {
+    background: #f8fafb;
+}
+
+.constituency-banner {
+    font-size: 0.9rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid transparent;
+}
+.constituency-banner.is-local {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border-bottom-color: #c8e6c9;
+}
+.constituency-banner.is-national {
+    background: #fff8e1;
+    color: #6d4c00;
+    border-bottom-color: #ffe082;
+}
+.constituency-banner a {
+    font-weight: 600;
+    color: inherit;
+}
+
+.comment-item {
+    border-bottom: 1px solid #eef0f2;
+    padding: 1rem 0;
+}
+.comment-item:last-child {
+    border-bottom: none;
+}
