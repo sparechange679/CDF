@@ -77,7 +77,7 @@
                             <div class="form-text">Choose the constituency added by the administrator. Developments on the portal will be limited to this area.</div>
                         </div>
                         <button type="submit" class="btn btn-cdf w-100 mb-3">Sign in</button>
-                        <p class="small text-muted text-center mb-0">Frontend only for now. The list of constituencies will later come from the admin backend.</p>
+                        <p class="small text-muted text-center mb-0">Are you not a citizen? Go to <a href="./auth.php" class="text-link">dashboard</a> </p>
                     </form>
                     <div id="logged-in" class="d-none">
                         <div class="text-center mb-3">
