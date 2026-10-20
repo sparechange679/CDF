@@ -1,3 +1,8 @@
+<?php
+require_once __DIR__ . '/includes/bootstrap.php';
+$me  = current_user();
+$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,19 +13,20 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <style>
+        .citizen-tabs { gap: .5rem; }
+        .citizen-tabs .nav-link { text-align: center; }
+        .pw-field { position: relative; }
+        .pw-field .form-control { padding-right: 2.75rem; }
+        .pw-toggle {
+            position: absolute; right: .35rem; top: 50%; transform: translateY(-50%);
+            border: none; background: none; color: #667078; padding: .4rem .55rem;
+        }
+    </style>
 </head>
 <body>
 
-<div class="gov-topbar">
-    <div class="container d-flex justify-content-between align-items-center">
-        <div><i class="bi bi-building"></i> Official Government of Malawi Portal</div>
-        <div class="d-none d-md-block">
-            <a href="#"><i class="bi bi-globe2"></i> English</a>
-            <span class="mx-2">|</span>
-            <a href="#"><i class="bi bi-telephone"></i> Support</a>
-        </div>
-    </div>
-</div>
+<?php include __DIR__ . '/includes/topbar.php'; ?>
 
 <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
@@ -52,47 +58,126 @@
 <section class="py-5 login-wrap">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
+            <div class="col-md-8 col-lg-6">
                 <div class="feedback-card">
-                    <div class="text-center mb-4">
-                        <i class="bi bi-shield-check text-danger fs-1"></i>
-                        <h1 class="h4 fw-bold mt-2">Citizen login</h1>
-                        <p class="text-muted small mb-0">Use this portal to vote, track and comment on CDF projects.</p>
-                    </div>
-                    <div id="login-alert"></div>
-                    <form id="login-form">
-                        <div class="mb-3">
-                            <label class="form-label fw-medium" for="email">Email or phone</label>
-                            <input type="text" class="form-control" id="email" required placeholder="e.g. 0888 000 000">
+
+                    <?php if ($me): ?>
+                        <!-- Already signed in -->
+                        <div id="logged-in" class="text-center">
+                            <i class="bi bi-person-check text-success fs-1"></i>
+                            <h1 class="h4 fw-bold mt-2">You are signed in</h1>
+                            <p class="mb-1">Signed in as <strong><?= htmlspecialchars($me['full_name'], ENT_QUOTES, 'UTF-8') ?></strong></p>
+                            <p class="text-muted small mb-4"><?= htmlspecialchars($me['role_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                            <div class="d-grid gap-2">
+                                <?php if ($me['role'] === 'citizen'): ?>
+                                    <a class="btn btn-cdf" href="projects.php">View my constituency projects</a>
+                                <?php else: ?>
+                                    <a class="btn btn-cdf" href="<?= htmlspecialchars($me['dashboard'], ENT_QUOTES, 'UTF-8') ?>">Go to my workspace</a>
+                                <?php endif; ?>
+                                <a class="btn btn-outline-gov" href="logout.php">Logout</a>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-medium" for="password">Password</label>
-                            <input type="password" class="form-control" id="password" required minlength="4">
+
+                    <?php else: ?>
+                        <div class="text-center mb-4">
+                            <i class="bi bi-shield-check text-danger fs-1"></i>
+                            <h1 class="h4 fw-bold mt-2">Citizen account</h1>
+                            <p class="text-muted small mb-0">Sign in or register to vote, track and comment on CDF projects.</p>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-medium" for="constituency">Constituency</label>
-                            <select class="form-select" id="constituency" required>
-                                <option value="" disabled selected>Select your constituency</option>
-                            </select>
-                            <div class="form-text">Choose the constituency added by the administrator. Developments on the portal will be limited to this area.</div>
+
+                        <ul class="nav nav-pills nav-fill citizen-tabs mb-4" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link <?= $tab === 'login' ? 'active' : '' ?>" id="citizen-login-tab" data-bs-toggle="pill" data-bs-target="#citizen-login-pane" type="button" role="tab" aria-controls="citizen-login-pane" aria-selected="<?= $tab === 'login' ? 'true' : 'false' ?>">Sign in</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link <?= $tab === 'register' ? 'active' : '' ?>" id="citizen-register-tab" data-bs-toggle="pill" data-bs-target="#citizen-register-pane" type="button" role="tab" aria-controls="citizen-register-pane" aria-selected="<?= $tab === 'register' ? 'true' : 'false' ?>">Create account</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+
+                            <!-- Sign in -->
+                            <div class="tab-pane fade <?= $tab === 'login' ? 'show active' : '' ?>" id="citizen-login-pane" role="tabpanel" aria-labelledby="citizen-login-tab" tabindex="0">
+                                <div id="login-alert"></div>
+                                <form id="login-form">
+                                    <!-- Account type: always citizen on this page -->
+                                    <input type="hidden" name="role" id="loginRole" value="citizen">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium" for="email">Email</label>
+                                        <input type="email" class="form-control" id="email" required autocomplete="username" placeholder="name@example.mw">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium" for="password">Password</label>
+                                        <div class="pw-field">
+                                            <input type="password" class="form-control" id="password" required autocomplete="current-password">
+                                            <button type="button" class="pw-toggle" data-target="password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="form-check mb-4">
+                                        <input class="form-check-input" type="checkbox" id="remember">
+                                        <label class="form-check-label small" for="remember">Keep me signed in on this device</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-cdf w-100 mb-3">Sign in</button>
+                                </form>
+                            </div>
+
+                            <!-- Register -->
+                            <div class="tab-pane fade <?= $tab === 'register' ? 'show active' : '' ?>" id="citizen-register-pane" role="tabpanel" aria-labelledby="citizen-register-tab" tabindex="0">
+                                <div id="register-alert"></div>
+                                <form id="register-form">
+                                    <!-- Account type: always citizen on this page -->
+                                    <input type="hidden" name="role" id="regRole" value="citizen">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium" for="regName">Full name</label>
+                                        <input type="text" class="form-control" id="regName" required autocomplete="name" maxlength="120">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium" for="regEmail">Email</label>
+                                        <input type="email" class="form-control" id="regEmail" required autocomplete="email" placeholder="name@example.mw">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium" for="regConstituency">Constituency</label>
+                                        <select class="form-select" id="regConstituency" required>
+                                            <option value="" disabled selected>Select your constituency</option>
+                                            <option value="" selected>Lilongwe South Constituency</option>
+                                            <option value="" selected>Lilongwe City Centre</option>
+                                            <option value="" selected>Blantyre City West</option>
+                                        </select>
+                                        <div class="form-text">Developments on the portal will be limited to this area.</div>
+                                    </div>
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-medium" for="regPw">Password</label>
+                                            <div class="pw-field">
+                                                <input type="password" class="form-control" id="regPw" required minlength="8" autocomplete="new-password">
+                                                <button type="button" class="pw-toggle" data-target="regPw" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                            <div class="form-text">At least eight characters.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-medium" for="regPw2">Confirm password</label>
+                                            <div class="pw-field">
+                                                <input type="password" class="form-control" id="regPw2" required minlength="8" autocomplete="new-password">
+                                                <button type="button" class="pw-toggle" data-target="regPw2" aria-label="Show password"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-check mb-4">
+                                        <input class="form-check-input" type="checkbox" id="terms" required>
+                                        <label class="form-check-label small" for="terms">I confirm the details above are correct and I agree to the portal’s terms of use.</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-cdf w-100 mb-3">Create account</button>
+                                </form>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-cdf w-100 mb-3">Sign in</button>
-                        <p class="small text-muted text-center mb-0">Are you not a citizen? Go to <a href="./auth.php" class="text-link">dashboard</a> </p>
-                    </form>
-                    <div id="logged-in" class="d-none">
-                        <div class="text-center mb-3">
-                            <p class="mb-1">Signed in as <strong id="session-name"></strong></p>
-                            <p class="text-muted small mb-0">Constituency: <strong id="session-constituency"></strong></p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-medium" for="switch-constituency">Change constituency</label>
-                            <select class="form-select" id="switch-constituency"></select>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <a class="btn btn-cdf" href="projects.php">View my constituency projects</a>
-                            <button type="button" class="btn btn-outline-gov" id="logout">Sign out</button>
-                        </div>
-                    </div>
+
+                        <hr class="my-3">
+                        <p class="small text-muted text-center mb-0">
+                            Are you not a citizen? Go to the <a href="auth.php" class="text-link">staff sign-in and registration</a>
+                            for District Council, MPs, District Development Officers and Contractors.
+                        </p>
+                    <?php endif; ?>
+
                 </div>
             </div>
         </div>
@@ -132,67 +217,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/app.js"></script>
-<script src='js/citizen-login.js'></script>
-<script>
-    (function () {
-        var form = document.getElementById("login-form");
-        var logged = document.getElementById("logged-in");
-        var constituencySelect = document.getElementById("constituency");
-        var switchSelect = document.getElementById("switch-constituency");
-
-        CDF.fillConstituencySelect(constituencySelect);
-
-        function showSession() {
-            var session = CDF.getSession();
-            if (!session) {
-                form.classList.remove("d-none");
-                logged.classList.add("d-none");
-                CDF.updateNavLogin();
-                return;
-            }
-            document.getElementById("session-name").textContent = session.id;
-            document.getElementById("session-constituency").textContent = session.constituencyName;
-            CDF.fillConstituencySelect(switchSelect, session.constituencyId);
-            form.classList.add("d-none");
-            logged.classList.remove("d-none");
-            CDF.updateNavLogin();
-        }
-
-        form.addEventListener("submit", function (e) {
-            e.preventDefault();
-            var constituency = CDF.findConstituency(constituencySelect.value);
-            if (!constituency) {
-                document.getElementById("login-alert").innerHTML =
-                    '<div class="alert alert-warning alert-gov py-2">Please select a constituency.</div>';
-                return;
-            }
-            CDF.saveSession({
-                id: document.getElementById("email").value.trim(),
-                constituencyId: constituency.id,
-                constituencyName: constituency.name,
-                at: Date.now()
-            });
-            window.location.href = "projects.php";
-        });
-
-        switchSelect.addEventListener("change", function () {
-            var constituency = CDF.findConstituency(switchSelect.value);
-            var session = CDF.getSession();
-            if (!constituency || !session) return;
-            session.constituencyId = constituency.id;
-            session.constituencyName = constituency.name;
-            CDF.saveSession(session);
-            window.location.href = "projects.php";
-        });
-
-        document.getElementById("logout").addEventListener("click", function () {
-            CDF.clearSession();
-            showSession();
-            window.location.reload();
-        });
-
-        showSession();
-    })();
-</script>
+<script src="js/citizen-login.js"></script>
 </body>
 </html>

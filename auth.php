@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/includes/bootstrap.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -132,6 +133,14 @@
         }
 
         .auth-note { font-size: .82rem; color: #667078; }
+        .approval-note {
+            font-size: .85rem;
+            background: var(--role-tint);
+            border-left: 4px solid var(--role);
+            border-radius: 6px;
+            padding: .65rem .9rem;
+            margin-top: 1rem;
+        }
 
         @media (max-width: 767px) {
             .auth-wrap { padding-top: 1.5rem; }
@@ -145,16 +154,7 @@
 </head>
 <body>
 
-<div class="gov-topbar">
-    <div class="container d-flex justify-content-between align-items-center">
-        <div><i class="bi bi-building"></i> Official Government of Malawi Portal</div>
-        <div class="d-none d-md-block">
-            <a href="#"><i class="bi bi-globe2"></i> English</a>
-            <span class="mx-2">|</span>
-            <a href="#"><i class="bi bi-telephone"></i> Support</a>
-        </div>
-    </div>
-</div>
+<?php include __DIR__ . '/includes/topbar.php'; ?>
 
 <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
@@ -227,6 +227,8 @@
                         <!-- Sign in -->
                         <div class="tab-pane fade show active" id="login-pane" role="tabpanel" aria-labelledby="login-tab" tabindex="0">
                             <form id="loginForm">
+                                <!-- Which kind of account is signing in: council, mp, ddo or contractor. Set by js/auth.js -->
+                                <input type="hidden" name="role" id="loginRole" value="council">
                                 <div class="mb-3">
                                     <label class="form-label fw-medium" for="loginId">Email</label>
                                     <input type="email" class="form-control" id="loginId" required autocomplete="username" placeholder="name@example.mw">
@@ -246,12 +248,17 @@
                                     <label class="form-check-label small" for="remember">Keep me signed in on this device</label>
                                 </div>
                                 <button type="submit" class="btn btn-auth w-100">Sign in</button>
+                                <p class="auth-note text-center mt-3 mb-0">
+                                    Don’t have an account? <a href="#" class="text-link js-to-register">Create one</a>
+                                </p>
                             </form>
                         </div>
 
                         <!-- Register -->
                         <div class="tab-pane fade" id="register-pane" role="tabpanel" aria-labelledby="register-tab" tabindex="0">
                             <form id="registerForm">
+                                <!-- Which kind of account is being created: council, mp, ddo or contractor. Set by js/auth.js -->
+                                <input type="hidden" name="role" id="regRole" value="council">
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label fw-medium" for="regName">Full name</label>
@@ -288,6 +295,10 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Only shown for roles that need approval (set by js/auth.js) -->
+                                <div class="approval-note d-none" id="approvalNote"></div>
+
                                 <div class="form-check my-4">
                                     <input class="form-check-input" type="checkbox" id="terms" required>
                                     <label class="form-check-label small" for="terms">I confirm the details above are correct and I agree to the portal’s terms of use.</label>
@@ -319,6 +330,6 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src='js/auth.js'></script>
+<script src="js/auth.js"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ if ($email === '' || $password === '' || !in_array($role, ROLE_SLUGS, true)) {
 
 $pdo  = db();
 $stmt = $pdo->prepare(
-    'SELECT u.id, u.full_name, u.password_hash, u.status, u.failed_login_attempts, u.locked_until,
+        'SELECT u.id, u.full_name, u.password_hash, u.status, u.failed_login_attempts, u.locked_until,
             (u.locked_until IS NOT NULL AND u.locked_until > NOW()) AS is_locked,
             r.slug AS role, r.name AS role_name, r.dashboard
        FROM users u JOIN roles r ON r.id = u.role_id
@@ -33,7 +33,7 @@ if ($user && $user['is_locked']) {
 // Lock has run out: start counting from zero again.
 if ($user && $user['locked_until'] !== null) {
     $pdo->prepare('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?')
-        ->execute([$user['id']]);
+            ->execute([$user['id']]);
 }
 
 // Always verify, even for unknown emails, so timing does not reveal which accounts exist.
@@ -43,7 +43,7 @@ if (!$user || !$passwordOk) {
     if ($user) {
         // The attempt counter is already incremented when locked_until is evaluated (left-to-right).
         $pdo->prepare(
-            'UPDATE users
+                'UPDATE users
                 SET failed_login_attempts = failed_login_attempts + 1,
                     locked_until = IF(failed_login_attempts >= ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), locked_until)
               WHERE id = ?'
@@ -55,13 +55,16 @@ if (!$user || !$passwordOk) {
 
 // Correct password from here on, so it is safe to explain what is wrong.
 if ($user['status'] === 'pending') {
-    json_out(['ok' => false, 'error' => 'Your account is waiting for approval. You will be able to sign in once it is approved.'], 403);
+    json_out(['ok' => false, 'error' => 'Your account is waiting for approval by the District Development Officer. You will be able to sign in once it is approved.'], 403);
 }
 if ($user['status'] === 'suspended') {
     json_out(['ok' => false, 'error' => 'This account has been suspended. Contact the district office.'], 403);
 }
 if ($user['role'] !== $role) {
-    json_out(['ok' => false, 'error' => 'This account is registered as ' . $user['role_name'] . '. Choose that role and try again.'], 403);
+    $message = $role === 'citizen'
+            ? 'This is a ' . $user['role_name'] . ' account. Use the staff sign-in page instead.'
+            : 'This account is registered as ' . $user['role_name'] . '. Choose that role and try again.';
+    json_out(['ok' => false, 'error' => $message], 403);
 }
 
 start_login((int) $user['id']);
@@ -71,16 +74,16 @@ if ($remember) {
 log_event((int) $user['id'], $email, 'login_success');
 
 $response = [
-    'ok'       => true,
-    'role'     => $user['role'],
-    'name'     => $user['full_name'],
-    'redirect' => $user['dashboard'],
+        'ok'       => true,
+        'role'     => $user['role'],
+        'name'     => $user['full_name'],
+        'redirect' => $user['dashboard'],
 ];
 
 // Citizens browse by constituency, so send theirs back for the portal to use.
 if ($user['role'] === 'citizen') {
     $c = $pdo->prepare(
-        'SELECT c.code, c.name FROM citizen_profiles p JOIN constituencies c ON c.id = p.constituency_id WHERE p.user_id = ?'
+            'SELECT c.code, c.name FROM citizen_profiles p JOIN constituencies c ON c.id = p.constituency_id WHERE p.user_id = ?'
     );
     $c->execute([$user['id']]);
     $response['constituency'] = $c->fetch() ?: null;

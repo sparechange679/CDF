@@ -11,18 +11,7 @@
 </head>
 <body>
 
-<div class="gov-topbar">
-    <div class="container d-flex justify-content-between align-items-center">
-        <div>
-            <i class="bi bi-building"></i> Official Government of Malawi Portal
-        </div>
-        <div class="d-none d-md-block">
-            <a href="#"><i class="bi bi-globe2"></i> English</a>
-            <span class="mx-2">|</span>
-            <a href="#"><i class="bi bi-telephone"></i> Support</a>
-        </div>
-    </div>
-</div>
+<?php include __DIR__ . '/includes/topbar.php'; ?>
 
 <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
