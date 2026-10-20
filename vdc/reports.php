@@ -8,7 +8,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Reports | VDC Workspace</title>
+    <title>Reports | DC Workspace</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="../css/style.css" rel="stylesheet">
@@ -23,8 +23,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <a class="navbar-brand" href="index.php">
                 <span class="vdc-brand-mark"><i class="bi bi-diagram-3"></i></span>
                 <div>
-                    VDC Workspace
-                    <small class="text-muted d-block">Village Development Committee</small>
+                    DC Workspace
+                    <small class="text-muted d-block">District Council</small>
                 </div>
             </a>
             <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
@@ -56,7 +56,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2 class="h5 mb-1">2026 portfolio report</h2>
-                <p class="small text-muted mb-0">Generated from the current VDC project register.</p>
+                <p class="small text-muted mb-0">Generated from the current DC project register.</p>
             </div>
             <button class="btn btn-outline-gov btn-sm" onclick="window.print()">
                 <i class="bi bi-printer me-1"></i> Print report
@@ -107,14 +107,14 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
     <footer>
         <div class="container">
             <div class="footer-bottom text-center mt-0">
-                <p class="mb-0">VDC Workspace · CDF Malawi · <a href="../index.php">Citizen portal</a></p>
+                <p class="mb-0">DC Workspace · CDF Malawi · <a href="../index.php">Citizen portal</a></p>
             </div>
         </div>
     </footer>
 
     <script src="vdc.js"></script>
     <script>
-        var list = VDC.get();
+        var list = DC.get();
 
         var budget = list.reduce(function (s, p) {
             return s + p.budget;
@@ -126,7 +126,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 
         document.getElementById('stats').innerHTML = [
             ['bi-folder2-open', list.length, 'Projects recorded', 'green'],
-            ['bi-cash-stack', VDC.money(budget), 'Total proposed value', 'blue'],
+            ['bi-cash-stack', DC.money(budget), 'Total proposed value', 'blue'],
             ['bi-check-circle', accepted, 'Accepted or delivering', 'gold'],
             ['bi-hand-thumbs-up', list.reduce(function (s, p) {
                 return s + p.votes;
@@ -156,7 +156,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             return '<div class="mb-3">' +
                 '<div class="d-flex justify-content-between small mb-1">' +
                 '<strong>' + k + '</strong>' +
-                '<span>' + VDC.money(by[k]) + '</span>' +
+                '<span>' + DC.money(by[k]) + '</span>' +
                 '</div>' +
                 '<div class="vdc-progress"><div class="progress-bar" style="width:' + Math.round(by[k] / max * 100) + '%"></div></div>' +
                 '</div>';

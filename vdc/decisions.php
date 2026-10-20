@@ -8,7 +8,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Decisions | VDC Workspace</title>
+    <title>Decisions | DC Workspace</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="../css/style.css" rel="stylesheet">
@@ -23,8 +23,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <a class="navbar-brand" href="index.php">
                 <span class="vdc-brand-mark"><i class="bi bi-diagram-3"></i></span>
                 <div>
-                    VDC Workspace
-                    <small class="text-muted d-block">Village Development Committee</small>
+                    DC Workspace
+                    <small class="text-muted d-block">District Council</small>
                 </div>
             </a>
             <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
@@ -90,14 +90,14 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
     <footer>
         <div class="container">
             <div class="footer-bottom text-center mt-0">
-                <p class="mb-0">VDC Workspace · <a href="../index.php">Citizen portal</a></p>
+                <p class="mb-0">DC Workspace · <a href="../index.php">Citizen portal</a></p>
             </div>
         </div>
     </footer>
 
     <script src="vdc.js"></script>
     <script>
-        var list = VDC.get();
+        var list = DC.get();
 
         var accepted = list.filter(function (p) {
             return ['accepted', 'progress', 'completed'].indexOf(p.status) > -1;
@@ -110,8 +110,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     '<strong>' + p.title + '</strong>' +
                     '<div class="vdc-kicker">' + p.area + ' · ' + p.sector + '</div>' +
                     '</td>' +
-                    '<td>' + VDC.money(p.budget) + '</td>' +
-                    '<td>' + VDC.statusBadge(p) + '</td>' +
+                    '<td>' + DC.money(p.budget) + '</td>' +
+                    '<td>' + DC.statusBadge(p) + '</td>' +
                     '<td class="text-end">' + p.votes.toLocaleString() + '</td>' +
                     '</tr>';
             }).join('')
@@ -126,9 +126,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 return '<div class="border-bottom pb-3 mb-3">' +
                     '<div class="d-flex justify-content-between gap-2">' +
                     '<strong>' + p.title + '</strong>' +
-                    VDC.statusBadge(p) +
+                    DC.statusBadge(p) +
                     '</div>' +
-                    '<div class="vdc-kicker mt-1">' + p.area + ' · ' + VDC.money(p.budget) + '</div>' +
+                    '<div class="vdc-kicker mt-1">' + p.area + ' · ' + DC.money(p.budget) + '</div>' +
                     '<p class="small text-danger mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>' + p.reason + '</p>' +
                     '</div>';
             }).join('')

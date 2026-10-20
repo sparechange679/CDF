@@ -46,6 +46,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <ul class='navbar-nav ms-auto align-items-lg-center'>
                 <li><a class='nav-link' href='index.php'>Overview</a></li>
                 <li><a class='nav-link' href='projects.php'>Priority projects</a></li>
+                <li><a class='nav-link' href='users.php'>User accounts</a></li>
                 <li><a class='nav-link active' href='reports.php'>Reports &amp; results</a></li>
             </ul>
         </div>

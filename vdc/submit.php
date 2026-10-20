@@ -8,7 +8,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Submit Project | VDC Workspace</title>
+    <title>Submit Project | DC Workspace</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="../css/style.css" rel="stylesheet">
@@ -23,8 +23,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <a class="navbar-brand" href="index.php">
                 <span class="vdc-brand-mark"><i class="bi bi-diagram-3"></i></span>
                 <div>
-                    VDC Workspace
-                    <small class="text-muted d-block">Village Development Committee</small>
+                    DC Workspace
+                    <small class="text-muted d-block">District Council</small>
                 </div>
             </a>
             <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
@@ -130,7 +130,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
     <footer>
         <div class="container">
             <div class="footer-bottom text-center mt-0">
-                <p class="mb-0">VDC Workspace · <a href="../index.php">Citizen portal</a></p>
+                <p class="mb-0">DC Workspace · <a href="../index.php">Citizen portal</a></p>
             </div>
         </div>
     </footer>
@@ -139,7 +139,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
     <script>
         document.getElementById('proposalForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            VDC.add(this);
+            DC.add(this);
             this.reset();
             document.getElementById('success').classList.remove('d-none');
             window.scrollTo({ top: 0, behavior: 'smooth' });
