@@ -8,6 +8,8 @@
 //   ddo        district              staff_number
 //   contractor company_name          business_reg_number
 //   citizen    constituency (name or code)   (not used)
+use JetBrains\PhpStorm\NoReturn;
+
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_post_with_csrf();
 
@@ -20,6 +22,7 @@ $confirm  = (string) ($in['confirm'] ?? '');
 $extra1   = trim((string) ($in['extra1'] ?? ''));
 $extra2   = trim((string) ($in['extra2'] ?? ''));
 
+#[NoReturn]
 function fail(string $message, int $status = 422): void
 {
     json_out(['ok' => false, 'error' => $message], $status);

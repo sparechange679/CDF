@@ -1,0 +1,183 @@
+.ddo-shell {
+    background: #f4f6f8;
+    min-height: 100vh;
+}
+
+.ddo-brand-mark {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #1769aa;
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+.ddo-nav .nav-link {
+    font-size: .9rem;
+}
+
+.ddo-nav .nav-link.active {
+    color: #1769aa !important;
+    background: #e5f1fb;
+}
+
+.ddo-hero {
+    background: linear-gradient(120deg, #123a58, #1769aa);
+    color: #fff;
+    padding: 52px 0 46px;
+}
+
+.ddo-hero h1 {
+    font-weight: 700;
+    max-width: 760px;
+}
+
+.ddo-hero p {
+    max-width: 720px;
+    opacity: .9;
+}
+
+.ddo-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #c9e6fb;
+}
+
+.ddo-panel {
+    background: #fff;
+    border: 1px solid #e4e9ee;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .04);
+}
+
+.ddo-panel-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #edf0f2;
+}
+
+.ddo-panel-body {
+    padding: 1.5rem;
+}
+
+.ddo-stat {
+    padding: 1.25rem;
+    border-left: 4px solid #1769aa;
+    height: 100%;
+}
+
+.ddo-stat.green {
+    border-left-color: #006b3f;
+}
+
+.ddo-stat.gold {
+    border-left-color: #d99a00;
+}
+
+.ddo-stat.red {
+    border-left-color: #c8102e;
+}
+
+.ddo-stat .number {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.ddo-stat .label {
+    color: #667078;
+    font-size: .82rem;
+}
+
+.ddo-table th {
+    color: #667078;
+    font-size: .73rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ddo-table td {
+    vertical-align: middle;
+}
+
+.ddo-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 20px;
+    padding: 5px 10px;
+    font-size: .73rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ddo-status.planning {
+    color: #8a5c00;
+    background: #fff3d6;
+}
+
+.ddo-status.active {
+    color: #155c9b;
+    background: #e2f0fb;
+}
+
+.ddo-status.completed {
+    color: #17633a;
+    background: #e1f4e7;
+}
+
+.ddo-status.blocked {
+    color: #a61b2e;
+    background: #fde7ea;
+}
+
+.ddo-progress {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 8px;
+}
+
+.ddo-progress .progress-bar {
+    background: #1769aa;
+}
+
+.ddo-kicker {
+    color: #667078;
+    font-size: .8rem;
+}
+
+.ddo-callout {
+    background: #eef6fc;
+    border-left: 4px solid #1769aa;
+    padding: 1rem 1.25rem;
+}
+
+.ddo-empty {
+    padding: 2rem;
+    text-align: center;
+    color: #667078;
+}
+
+.ddo-comment {
+    border-left: 3px solid #d5e5f0;
+    padding-left: 1rem;
+}
+
+@media (max-width: 767px) {
+    .ddo-hero {
+        padding: 38px 0;
+    }
+
+    .ddo-panel-body {
+        padding: 1rem;
+    }
+
+    .ddo-table {
+        min-width: 820px;
+    }
+}

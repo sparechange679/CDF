@@ -3,7 +3,7 @@
 (function () {
     "use strict";
 
-    var ROLES = {
+    let ROLES = {
         council: {
             title: "District Council",
             icon: "bi-diagram-3",
@@ -38,13 +38,13 @@
         }
     };
 
-    var card = document.getElementById("authCard");
-    var current = "council";
-    var csrf = null;
+    let card = document.getElementById("authCard");
+    let current = "council";
+    let csrf = null;
 
     /* ---------- Role switcher ---------- */
     function setRole(key) {
-        var r = ROLES[key];
+        let r = ROLES[key];
         current = key;
         card.setAttribute("data-role", key);
         document.getElementById("asideTitle").textContent = r.title;
@@ -58,7 +58,7 @@
         document.getElementById("extra2Label").textContent = r.extra[1];
 
         // MPs pick their constituency from the database list.
-        var extra1 = document.getElementById("extra1");
+        let extra1 = document.getElementById("extra1");
         if (key === "mp") {
             extra1.setAttribute("list", "constituencyList");
             extra1.setAttribute("placeholder", "Start typing to search");
@@ -76,7 +76,7 @@
     fetch("api/constituencies.php", { credentials: "same-origin" })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-            var list = document.createElement("datalist");
+            let list = document.createElement("datalist");
             list.id = "constituencyList";
             list.innerHTML = (d.constituencies || []).map(function (c) {
                 return '<option value="' + c.name + '">';
@@ -117,7 +117,7 @@
 
     function showAlert(form, message, type) {
         clearAlerts();
-        var box = document.createElement("div");
+        let box = document.createElement("div");
         box.className = "js-alert alert alert-" + type + " alert-gov py-2";
         box.setAttribute("role", "alert");
         box.textContent = message;
@@ -125,7 +125,7 @@
     }
 
     function busy(form, on, label) {
-        var btn = form.querySelector('button[type="submit"]');
+        let btn = form.querySelector('button[type="submit"]');
         if (!btn) return;
         if (on) {
             btn.dataset.label = btn.textContent;
@@ -140,7 +140,7 @@
     function val(id) { return document.getElementById(id).value; }
 
     /* ---------- Sign in ---------- */
-    var loginForm = document.getElementById("loginForm");
+    let loginForm = document.getElementById("loginForm");
     loginForm.addEventListener("submit", function (e) {
         e.preventDefault();
         busy(loginForm, true, "Signing in…");
@@ -160,7 +160,7 @@
     });
 
     /* ---------- Create account ---------- */
-    var registerForm = document.getElementById("registerForm");
+    let registerForm = document.getElementById("registerForm");
     registerForm.addEventListener("submit", function (e) {
         e.preventDefault();
         if (val("regPw") !== val("regPw2")) {
@@ -197,8 +197,8 @@
     /* ---------- Small UI helpers (unchanged) ---------- */
     document.querySelectorAll(".pw-toggle").forEach(function (btn) {
         btn.addEventListener("click", function () {
-            var input = document.getElementById(this.dataset.target);
-            var show = input.type === "password";
+            let input = document.getElementById(this.dataset.target);
+            let show = input.type === "password";
             input.type = show ? "text" : "password";
             this.innerHTML = '<i class="bi ' + (show ? "bi-eye-slash" : "bi-eye") + '"></i>';
             this.setAttribute("aria-label", show ? "Hide password" : "Show password");
