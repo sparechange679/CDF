@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+$me = require_role('ddo');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -58,33 +57,34 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         <div>
             <div class="ddo-eyebrow text-primary">District delivery report</div>
             <h1 class="h2">Project reports and results</h1>
-            <p class="text-muted mb-0">A generated view of assigned resources, delivery status, and recorded
-                outcomes.</p></div>
-        <button class="btn btn-cdf btn-sm no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i> Generate
-            / print
-        </button>
+            <p class="text-muted mb-0">A generated view of assigned contractors, delivery status, and recorded contractor progress updates.</p>
+        </div>
+        <button class="btn btn-cdf btn-sm no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i> Generate / print</button>
     </div>
     <div class="row g-3 mb-4" id="stats"></div>
     <div class="ddo-panel">
-        <div class="ddo-panel-header"><h2 class="h5 mb-1">Delivery results</h2>
-            <p class="text-muted small mb-0">Latest report and expected result for each approved project.</p></div>
+        <div class="ddo-panel-header">
+            <h2 class="h5 mb-1">Delivery results</h2>
+            <p class="text-muted small mb-0">Latest report and expected result for each approved project.</p>
+        </div>
         <div class="table-responsive">
             <table class="table ddo-table mb-0">
                 <thead>
                 <tr>
                     <th>Project</th>
-                    <th>Supplier / supervisor</th>
+                    <th>Contractor / supervisor</th>
                     <th>Timeline</th>
                     <th>Progress</th>
                     <th>Report and result</th>
                 </tr>
                 </thead>
-                <tbody id="rows"></tbody>
+                <tbody id="rows">
+                    <tr><td colspan="5" class="ddo-empty">Loading reports…</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
-    <p class="small text-muted mt-4">Generated: 28 Aug 2026 · Reconcile with signed site reports, procurement records,
-        and district finance returns.</p>
+    <p class="small text-muted mt-4">Generated: <?= date('d M Y') ?> · Reconcile with signed site reports, procurement records, and district finance returns.</p>
 </main>
 
 <footer>
@@ -93,21 +93,50 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
     </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="ddo.js"></script>
 <script>
-    let a = DDO.get(), funds = a.reduce(function (s, p) {
-        return s + (p.allocation ? p.allocation.amount : 0)
-    }, 0), done = a.filter(function (p) {
-        return p.status === 'completed'
-    }).length, assigned = a.filter(function (p) {
-        return p.supplier
-    }).length;
-    document.getElementById('stats').innerHTML = [['bi-kanban', a.length, 'Approved projects', 'blue'], ['bi-wallet2', DDO.money(funds), 'Funds assigned', 'green'], ['bi-person-check', assigned, 'Delivery teams assigned', 'gold'], ['bi-check-circle', done, 'Completed results', 'red']].map(function (x) {
-        return '<div class="col-6 col-lg-3"><div class="ddo-panel ddo-stat ' + x[3] + '"><i class="bi ' + x[0] + ' text-muted"></i><div class="number">' + x[1] + '</div><div class="label">' + x[2] + '</div></div></div>'
-    }).join('');
-    document.getElementById('rows').innerHTML = a.map(function (p) {
-        return '<tr><td><strong>' + p.title + '</strong><div class="ddo-kicker">' + p.area + ' · ' + DDO.badge(p) + '</div></td><td class="small">' + (p.supplier || 'Pending assignment') + '<br><span class="ddo-kicker">' + (p.supervisor || 'No supervisor') + '</span></td><td class="small">' + (p.start || 'Not set') + '<br>' + (p.end || 'Not set') + '</td><td><strong>' + p.progress + '%</strong><div class="ddo-progress mt-1"><div class="progress-bar" style="width:' + p.progress + '%"></div></div></td><td class="small"><strong>Report:</strong> ' + (p.report || 'Pending') + '<br><strong>Result:</strong> ' + (p.result || 'Pending') + '</td></tr>'
-    }).join('') || '<tr><td colspan="5" class="ddo-empty">No approved project reports are available.</td></tr>';
+    DDO.load(function (err, a) {
+        if (err || !a) {
+            document.getElementById('rows').innerHTML = '<tr><td colspan="5" class="ddo-empty">Unable to load reports.</td></tr>';
+            return;
+        }
+
+        var funds = a.reduce(function (s, p) {
+            return s + (p.allocation ? Number(p.allocation.amount || 0) : Number(p.budget || 0));
+        }, 0);
+        var done = a.filter(function (p) {
+            return p.status === 'completed' || (p.assignment && p.assignment.status === 'completed');
+        }).length;
+        var assigned = a.filter(function (p) {
+            return p.supplier || (p.assignment && p.assignment.contractor_name);
+        }).length;
+
+        document.getElementById('stats').innerHTML = [
+            ['bi-kanban', a.length, 'Approved projects', 'blue'],
+            ['bi-wallet2', DDO.money(funds), 'Funds assigned', 'green'],
+            ['bi-person-check', assigned, 'Contractors assigned', 'gold'],
+            ['bi-check-circle', done, 'Completed results', 'red']
+        ].map(function (x) {
+            return '<div class="col-6 col-lg-3"><div class="ddo-panel ddo-stat ' + x[3] + '"><i class="bi ' + x[0] + ' text-muted"></i><div class="number">' + x[1] + '</div><div class="label">' + x[2] + '</div></div></div>';
+        }).join('');
+
+        document.getElementById('rows').innerHTML = a.map(function (p) {
+            var prog = Number(p.progress || 0);
+            var supplier = p.supplier || (p.assignment ? (p.assignment.contractor_company || p.assignment.contractor_name) : 'Pending assignment');
+            var supervisor = p.supervisor || (p.assignment ? p.assignment.supervisor : 'No supervisor');
+            var timeline = (p.start || (p.assignment ? p.assignment.start_date : 'Not set')) + '<br>' + (p.end || (p.assignment ? p.assignment.target_date : 'Not set'));
+            var report = p.report || (p.assignment ? (p.assignment.completion_report || 'Pending') : 'Pending');
+
+            return '<tr>' +
+                '<td><strong>' + DDO.esc(p.title) + '</strong><div class="ddo-kicker">' + DDO.esc(p.area) + ' · ' + DDO.badge(p) + '</div></td>' +
+                '<td class="small">' + DDO.esc(supplier) + '<br><span class="ddo-kicker">' + DDO.esc(supervisor) + '</span></td>' +
+                '<td class="small">' + timeline + '</td>' +
+                '<td><strong>' + prog + '%</strong><div class="ddo-progress mt-1"><div class="progress-bar" style="width:' + prog + '%"></div></div></td>' +
+                '<td class="small"><strong>Latest report:</strong> ' + DDO.esc(report) + '<br><strong>Result/Scope:</strong> ' + DDO.esc(p.description || 'Pending') + '</td>' +
+                '</tr>';
+        }).join('') || '<tr><td colspan="5" class="ddo-empty">No approved project reports are available.</td></tr>';
+    });
 </script>
 </body>
 </html>

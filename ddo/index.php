@@ -1,5 +1,6 @@
 <?php
 include 'includes/head.php';
+require_role('ddo');
 include 'includes/nav.php';
 ?>
 
@@ -8,8 +9,8 @@ include 'includes/nav.php';
         <div class="ddo-eyebrow mb-2">District delivery oversight · 2026</div>
         <h1>Move approved priorities from allocation to results.</h1>
         <p class="lead mb-4">
-            Assign delivery teams, verify project funds, maintain timelines,
-            and publish clear progress reports for every approved development.
+            Assign available contractors, verify project funds, maintain timelines,
+            and monitor live contractor progress reports for every approved development.
         </p>
         <a class="btn btn-light fw-semibold" href="projects.php">
             <i class="bi bi-kanban me-2"></i>Open project delivery
@@ -27,8 +28,7 @@ include 'includes/nav.php';
                 <div class="ddo-panel-header d-flex justify-content-between align-items-center">
                     <div>
                         <h2 class="h5 mb-1">Approved and prioritised developments</h2>
-                        <p class="text-muted small mb-0">Priority is calculated from citizen votes and current
-                            readiness.</p>
+                        <p class="text-muted small mb-0">Priority is calculated from citizen votes and current readiness.</p>
                     </div>
                     <a href="projects.php" class="btn btn-outline-gov btn-sm">View all</a>
                 </div>
@@ -43,7 +43,9 @@ include 'includes/nav.php';
                             <th></th>
                         </tr>
                         </thead>
-                        <tbody id="rows"></tbody>
+                        <tbody id="rows">
+                            <tr><td colspan="5" class="ddo-empty">Loading projects…</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -57,7 +59,7 @@ include 'includes/nav.php';
                 </div>
                 <div class="ddo-panel-body d-grid gap-2">
                     <a href="projects.php" class="btn btn-cdf text-start">
-                        <i class="bi bi-person-workspace me-2"></i>Assign supplier and supervisor
+                        <i class="bi bi-person-workspace me-2"></i>Assign available contractor
                     </a>
                     <a href="reports.php" class="btn btn-outline-gov text-start">
                         <i class="bi bi-file-earmark-bar-graph me-2"></i>View reports and results
@@ -81,45 +83,51 @@ include 'includes/nav.php';
     </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="ddo.js"></script>
 <script>
-    let a = DDO.get();
+    DDO.load(function (err, a) {
+        if (err || !a) {
+            document.getElementById('rows').innerHTML = '<tr><td colspan="5" class="ddo-empty">Unable to load projects.</td></tr>';
+            return;
+        }
 
-    let ranked = DDO.priority(a);
+        let ranked = DDO.priority(a);
 
-    let allocated = a.reduce(function (s, p) {
-        return s + (p.allocation ? p.allocation.amount : 0);
-    }, 0);
+        let allocated = a.reduce(function (s, p) {
+            return s + (p.allocation ? Number(p.allocation.amount || 0) : Number(p.budget || 0));
+        }, 0);
 
-    let active = a.filter(function (p) {
-        return p.status === 'active';
-    }).length;
+        let active = a.filter(function (p) {
+            return p.status === 'progress' || (p.assignment && (p.assignment.status === 'active' || p.assignment.status === 'assigned'));
+        }).length;
 
-    let done = a.filter(function (p) {
-        return p.status === 'completed';
-    }).length;
+        let done = a.filter(function (p) {
+            return p.status === 'completed' || (p.assignment && p.assignment.status === 'completed');
+        }).length;
 
-    document.getElementById('stats').innerHTML = [
-        ['bi-kanban', '' + a.length, 'Approved projects', 'blue'],
-        ['bi-wallet2', DDO.money(allocated), 'Funds assigned', 'green'],
-        ['bi-activity', '' + active, 'In delivery', 'gold'],
-        ['bi-check-circle', '' + done, 'Completed results', 'red']
-    ].map(function (x) {
-        return '<div class="col-6 col-lg-3">' +
-            '<div class="ddo-panel ddo-stat ' + x[3] + '">' +
-            '<i class="bi ' + x[0] + ' text-muted"></i>' +
-            '<div class="number">' + x[1] + '</div>' +
-            '<div class="label">' + x[2] + '</div>' +
-            '</div>' +
-            '</div>';
-    }).join('');
+        document.getElementById('stats').innerHTML = [
+            ['bi-kanban', '' + a.length, 'Approved projects', 'blue'],
+            ['bi-wallet2', DDO.money(allocated), 'Funds allocated', 'green'],
+            ['bi-activity', '' + active, 'In delivery', 'gold'],
+            ['bi-check-circle', '' + done, 'Completed results', 'red']
+        ].map(function (x) {
+            return '<div class="col-6 col-lg-3">' +
+                '<div class="ddo-panel ddo-stat ' + x[3] + '">' +
+                '<i class="bi ' + x[0] + ' text-muted"></i>' +
+                '<div class="number">' + x[1] + '</div>' +
+                '<div class="label">' + x[2] + '</div>' +
+                '</div>' +
+                '</div>';
+        }).join('');
 
-    document.getElementById('rows').innerHTML = ranked.slice(0, 5).map(DDO.row).join('') ||
-        '<tr><td colspan="5" class="ddo-empty">No approved projects are available from the MP workspace.</td></tr>';
+        document.getElementById('rows').innerHTML = ranked.slice(0, 5).map(DDO.row).join('') ||
+            '<tr><td colspan="5" class="ddo-empty">No approved projects are available.</td></tr>';
 
-    document.getElementById('leader').textContent = ranked[0]
-        ? ranked[0].title + ' · ' + ranked[0].votes.toLocaleString() + ' votes'
-        : '';
+        document.getElementById('leader').textContent = ranked[0]
+            ? ranked[0].title + ' · ' + Number(ranked[0].votes || 0).toLocaleString() + ' votes'
+            : 'None';
+    });
 </script>
 </body>
 </html>
