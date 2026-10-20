@@ -434,11 +434,11 @@
         banner.innerHTML = session
             ? '<div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">' +
                 '<span><i class="bi bi-geo-alt-fill me-1"></i> Viewing developments in <strong>' + session.constituencyName + "</strong></span>" +
-                '<a href="login.php">Change constituency</a>' +
+                '<a href="../api/login.php">Change constituency</a>' +
               "</div>"
             : '<div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">' +
                 '<span><i class="bi bi-info-circle me-1"></i> Select your constituency at login to view local CDF developments.</span>' +
-                '<a href="login.php">Choose constituency</a>' +
+                '<a href="../api/login.php">Choose constituency</a>' +
               "</div>";
         nav.insertAdjacentElement("afterend", banner);
     }

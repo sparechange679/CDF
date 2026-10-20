@@ -278,7 +278,7 @@
                                             <input type="password" class="form-control" id="regPw" required minlength="8" autocomplete="new-password">
                                             <button type="button" class="pw-toggle" data-target="regPw" aria-label="Show password"><i class="bi bi-eye"></i></button>
                                         </div>
-                                        <div class="form-text">At least 8 characters.</div>
+                                        <div class="form-text">At least eight characters.</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-medium" for="regPw2">Confirm password</label>
@@ -293,13 +293,16 @@
                                     <label class="form-check-label small" for="terms">I confirm the details above are correct and I agree to the portal’s terms of use.</label>
                                 </div>
                                 <button type="submit" class="btn btn-auth w-100">Create account</button>
+                                <p class="auth-note text-center mt-3 mb-0">
+                                    Already registered? <a href="#" class="text-link js-to-login">Sign in</a>
+                                </p>
                             </form>
                         </div>
                     </div>
 
                     <hr class="my-4">
                     <p class="auth-note mb-0">
-                        Are you a citizen? <a href="login.php" class="text-link">Use the citizen login</a> to vote and give feedback.
+                        Are you a citizen? <a href="./login.php" class="text-link">Use the citizen login</a> to vote and give feedback.
                     </p>
                 </div>
             </div>
@@ -310,7 +313,7 @@
 <footer>
     <div class="container">
         <div class="footer-bottom text-center mt-0 border-0 pt-0">
-            <p class="mb-0">© 2026 Government of Malawi • Constituency Development Fund (CDF) Citizen Monitoring System</p>
+            <p class="mb-0">&copy; 2026 Government of Malawi • Constituency Development Fund (CDF) Citizen Monitoring System</p>
         </div>
     </div>
 </footer>
@@ -320,7 +323,7 @@
     (function () {
         // Role content and landing page. Replace the redirect with real
         // role-based routing once the backend is connected.
-        var ROLES = {
+        const ROLES = {
             council: {
                 title: "District Council",
                 icon: "bi-diagram-3",
@@ -359,11 +362,11 @@
             }
         };
 
-        var card = document.getElementById("authCard");
-        var current = "council";
+        const card = document.getElementById("authCard");
+        let current = "council";
 
         function setRole(key) {
-            var r = ROLES[key];
+            let r = ROLES[key];
             current = key;
             card.setAttribute("data-role", key);
             document.getElementById("asideTitle").textContent = r.title;
@@ -392,8 +395,8 @@
         // Show/hide password
         document.querySelectorAll(".pw-toggle").forEach(function (btn) {
             btn.addEventListener("click", function () {
-                var input = document.getElementById(this.dataset.target);
-                var show = input.type === "password";
+                let input = document.getElementById(this.dataset.target);
+                let show = input.type === "password";
                 input.type = show ? "text" : "password";
                 this.innerHTML = '<i class="bi ' + (show ? "bi-eye-slash" : "bi-eye") + '"></i>';
                 this.setAttribute("aria-label", show ? "Hide password" : "Show password");

@@ -132,6 +132,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/app.js"></script>
+<script src='js/citizen-login.js'></script>
 <script>
     (function () {
         var form = document.getElementById("login-form");
