@@ -1,3 +1,8 @@
+<?php
+require_once __DIR__ . '/../includes/bootstrap.php';
+$me  = current_user();
+$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,13 +16,8 @@
 </head>
 <body class="vdc-shell">
 
-<?php
-// Top bar for the public pages.
-// The page must load includes/bootstrap.php on its very first line (before any
-// HTML) so the session is started, then include this file where the old
-// gov-topbar div used to be (include __DIR__ . '/includes/topbar.php').
-$topbarUser = function_exists('current_user') ? current_user() : null;
-?>
+<?php include __DIR__ . '/../includes/topbar.php'; ?>
+
 <div class="gov-topbar">
     <div class="container d-flex justify-content-between align-items-center">
         <div><i class="bi bi-building"></i> Official Government of Malawi Portal</div>

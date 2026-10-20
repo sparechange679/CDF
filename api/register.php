@@ -124,7 +124,14 @@ if ($status === 'active') {
     start_login($userId);
     $dash = $pdo->prepare('SELECT dashboard FROM roles WHERE slug = ?');
     $dash->execute([$role]);
-    json_out(['ok' => true, 'pending' => false, 'redirect' => $dash->fetchColumn()], 201);
+    $response = ['ok' => true, 'pending' => false, 'redirect' => $dash->fetchColumn()];
+
+    if ($role === 'citizen') {
+        $c = $pdo->prepare('SELECT code, name FROM constituencies WHERE id = ?');
+        $c->execute([$cid]);
+        $response['constituency'] = $c->fetch() ?: null;
+    }
+    json_out($response, 201);
 }
 
 json_out([

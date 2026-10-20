@@ -283,10 +283,15 @@
         localStorage.removeItem(SESSION_KEY);
     }
 
+    // CHANGED: match on the constituency id (code) OR the constituency name,
+    // so the filter still works if the database codes differ from the ids above.
     function filterForCitizen(list) {
         let session = getSession();
-        if (!session || !session.constituencyId) return list;
-        return list.filter(function (p) { return p.constituencyId === session.constituencyId; });
+        if (!session || (!session.constituencyId && !session.constituencyName)) return list;
+        return list.filter(function (p) {
+            return p.constituencyId === session.constituencyId ||
+                p.constituency === session.constituencyName;
+        });
     }
 
     function statusClass(status) {
@@ -431,15 +436,16 @@
         let banner = document.createElement("div");
         banner.id = "constituency-banner";
         banner.className = session ? "constituency-banner is-local" : "constituency-banner is-national";
+        // CHANGED: links now go to login.php (was ../api/login.php)
         banner.innerHTML = session
             ? '<div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">' +
-                '<span><i class="bi bi-geo-alt-fill me-1"></i> Viewing developments in <strong>' + session.constituencyName + "</strong></span>" +
-                '<a href="../api/login.php">Change constituency</a>' +
-              "</div>"
+            '<span><i class="bi bi-geo-alt-fill me-1"></i> Viewing developments in <strong>' + session.constituencyName + "</strong></span>" +
+            '<a href="login.php">Change constituency</a>' +
+            "</div>"
             : '<div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">' +
-                '<span><i class="bi bi-info-circle me-1"></i> Select your constituency at login to view local CDF developments.</span>' +
-                '<a href="../api/login.php">Choose constituency</a>' +
-              "</div>";
+            '<span><i class="bi bi-info-circle me-1"></i> Select your constituency at login to view local CDF developments.</span>' +
+            '<a href="login.php">Choose constituency</a>' +
+            "</div>";
         nav.insertAdjacentElement("afterend", banner);
     }
 
@@ -465,30 +471,30 @@
 
         return (
             '<div class="col-md-6 col-lg-4" data-status="' + p.status + '" data-category="' + p.category + '">' +
-                '<div class="project-card">' +
-                    '<img src="' + p.image + '" alt="' + p.title + '">' +
-                    '<div class="project-body">' +
-                        '<div class="d-flex justify-content-between align-items-start mb-2 gap-2">' +
-                            '<h5 class="mb-0 fw-semibold">' + p.title + '</h5>' +
-                            '<span class="status-badge ' + statusClass(p.status) + '">' + p.statusLabel + '</span>' +
-                        '</div>' +
-                        '<p class="meta-info mb-3">' +
-                            '<i class="bi bi-geo-alt-fill"></i> ' + p.constituency + '<br>' +
-                            '<i class="bi bi-cash-stack"></i> Budget: ' + p.budget +
-                        '</p>' + extra +
-                        '<div class="d-flex justify-content-between small mb-1">' +
-                            '<span>Progress</span>' +
-                            '<span class="fw-semibold">' + p.progress + '%</span>' +
-                        '</div>' +
-                        '<div class="progress mb-3">' +
-                            '<div class="progress-bar ' + progressBarClass(p.progress, p.complete) + '" style="width: ' + p.progress + '%"></div>' +
-                        '</div>' +
-                        '<div class="d-flex gap-2">' +
-                            (voteBtn || '<a class="btn btn-cdf btn-sm flex-fill" href="/vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a>') +
-                            '<a class="btn btn-outline-gov btn-sm flex-fill" href="' + detailsHref + '">Details</a>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
+            '<div class="project-card">' +
+            '<img src="' + p.image + '" alt="' + p.title + '">' +
+            '<div class="project-body">' +
+            '<div class="d-flex justify-content-between align-items-start mb-2 gap-2">' +
+            '<h5 class="mb-0 fw-semibold">' + p.title + '</h5>' +
+            '<span class="status-badge ' + statusClass(p.status) + '">' + p.statusLabel + '</span>' +
+            '</div>' +
+            '<p class="meta-info mb-3">' +
+            '<i class="bi bi-geo-alt-fill"></i> ' + p.constituency + '<br>' +
+            '<i class="bi bi-cash-stack"></i> Budget: ' + p.budget +
+            '</p>' + extra +
+            '<div class="d-flex justify-content-between small mb-1">' +
+            '<span>Progress</span>' +
+            '<span class="fw-semibold">' + p.progress + '%</span>' +
+            '</div>' +
+            '<div class="progress mb-3">' +
+            '<div class="progress-bar ' + progressBarClass(p.progress, p.complete) + '" style="width: ' + p.progress + '%"></div>' +
+            '</div>' +
+            '<div class="d-flex gap-2">' +
+            (voteBtn || '<a class="btn btn-cdf btn-sm flex-fill" href="/vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a>') +
+            '<a class="btn btn-outline-gov btn-sm flex-fill" href="' + detailsHref + '">Details</a>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
             '</div>'
         );
     }

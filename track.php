@@ -1,3 +1,8 @@
+<?php
+require_once __DIR__ . '/includes/bootstrap.php';
+$me  = current_user();
+$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

@@ -1,3 +1,8 @@
+<?php
+require_once __DIR__ . '/../includes/bootstrap.php';
+$me  = current_user();
+$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,12 +16,7 @@
 </head>
 <body class="ddo-shell">
 
-    <div class="gov-topbar">
-        <div class="container d-flex justify-content-between">
-            <span><i class="bi bi-building me-1"></i> Official Government of Malawi Portal</span>
-            <span>District Development Officer Workspace</span>
-        </div>
-    </div>
+<?php include __DIR__ . '/../includes/topbar.php'; ?>
 
     <nav class="navbar navbar-expand-lg sticky-top ddo-nav">
         <div class="container">

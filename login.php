@@ -137,11 +137,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-medium" for="regConstituency">Constituency</label>
-                                        <select class="form-select" id="regConstituency" required>
-                                            <option value="" disabled selected>Select your constituency</option>
-                                            <option value="" selected>Lilongwe South Constituency</option>
-                                            <option value="" selected>Lilongwe City Centre</option>
-                                            <option value="" selected>Blantyre City West</option>
+                                        <select class='form-select' id='regConstituency' required>
+                                            <option value='' selected disabled>Select your constituency</option>
                                         </select>
                                         <div class="form-text">Developments on the portal will be limited to this area.</div>
                                     </div>
