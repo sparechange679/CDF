@@ -135,38 +135,38 @@ require_role('ddo');   // only District Development Officers may open this page
     (function () {
         "use strict";
 
-        var API = '../api/ddo_users.php';
-        var CSRF = '../api/csrf.php';
-        var users = [];
-        var me = 0;
+        let API = '../api/ddo_users.php';
+        let CSRF = '../api/csrf.php';
+        let users = [];
+        let me = 0;
 
-        var STATUS = {
+        let STATUS = {
             pending:   { cls: 'planning',  label: 'Pending' },
             active:    { cls: 'completed', label: 'Active' },
             suspended: { cls: 'blocked',   label: 'Suspended' }
         };
 
         function esc(s) {
-            var d = document.createElement('div');
+            let d = document.createElement('div');
             d.textContent = s == null ? '' : String(s);
             return d.innerHTML;
         }
 
         function fmt(d) {
             if (!d) return 'Never';
-            var t = new Date(d.replace(' ', 'T'));
+            let t = new Date(d.replace(' ', 'T'));
             return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
         function showAlert(msg, type) {
-            var box = document.getElementById('alert');
+            let box = document.getElementById('alert');
             box.innerHTML = '<div class="alert alert-' + type + ' alert-gov py-2" role="alert"></div>';
             box.firstChild.textContent = msg;
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function badge(status) {
-            var s = STATUS[status] || STATUS.pending;
+            let s = STATUS[status] || STATUS.pending;
             return '<span class="ddo-status ' + s.cls + '"><i class="bi bi-circle-fill" style="font-size:.42rem"></i>' + s.label + '</span>';
         }
 
@@ -182,7 +182,7 @@ require_role('ddo');   // only District Development Officers may open this page
         }
 
         function counts() {
-            var c = { pending: 0, active: 0, suspended: 0 };
+            let c = { pending: 0, active: 0, suspended: 0 };
             users.forEach(function (u) { if (c[u.status] !== undefined) c[u.status]++; });
             document.getElementById('n-pending').textContent = c.pending;
             document.getElementById('n-active').textContent = c.active;
@@ -191,12 +191,12 @@ require_role('ddo');   // only District Development Officers may open this page
         }
 
         function render() {
-            var q = document.getElementById('q').value.toLowerCase().trim();
-            var st = document.getElementById('status').value;
-            var ro = document.getElementById('role').value;
+            let q = document.getElementById('q').value.toLowerCase().trim();
+            let st = document.getElementById('status').value;
+            let ro = document.getElementById('role').value;
 
-            var list = users.filter(function (u) {
-                var hay = [u.full_name, u.email, u.detail1, u.detail2, u.role_name].join(' ').toLowerCase();
+            let list = users.filter(function (u) {
+                let hay = [u.full_name, u.email, u.detail1, u.detail2, u.role_name].join(' ').toLowerCase();
                 return (!st || u.status === st) && (!ro || u.role === ro) && (!q || hay.indexOf(q) > -1);
             });
 
@@ -239,11 +239,11 @@ require_role('ddo');   // only District Development Officers may open this page
         }
 
         function change(id, action, btn) {
-            var u = users.filter(function (x) { return x.id === id; })[0];
+            let u = users.filter(function (x) { return x.id === id; })[0];
             if (!u) return;
 
-            var verb = action === 'suspend' ? 'suspend' : 'activate';
-            var msg = action === 'suspend'
+            let verb = action === 'suspend' ? 'suspend' : 'activate';
+            let msg = action === 'suspend'
                 ? 'Suspend ' + u.full_name + '? They will be signed out and blocked until you restore access.'
                 : 'Activate the account for ' + u.full_name + '?';
             if (!window.confirm(msg)) return;
@@ -269,7 +269,7 @@ require_role('ddo');   // only District Development Officers may open this page
                     }
                     u.status = d.status;
                     // Keep pending/suspended people at the top, like the server order.
-                    var order = { pending: 0, active: 1, suspended: 2 };
+                    let order = { pending: 0, active: 1, suspended: 2 };
                     users.sort(function (a, b) { return order[a.status] - order[b.status]; });
                     counts();
                     render();
@@ -282,7 +282,7 @@ require_role('ddo');   // only District Development Officers may open this page
         }
 
         document.getElementById('rows').addEventListener('click', function (e) {
-            var btn = e.target.closest('button[data-action]');
+            let btn = e.target.closest('button[data-action]');
             if (!btn) return;
             change(Number(btn.dataset.id), btn.dataset.action, btn);
         });

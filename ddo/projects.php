@@ -87,19 +87,19 @@ require_role('ddo');
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="ddo.js"></script>
+<script src='ddo.js?v=20261020'></script>
 <script>
-    var all = [];
+    let all = [];
 
     function render() {
-        var q = (document.getElementById('q').value || '').toLowerCase().trim();
-        var f = document.getElementById('filter').value;
+        let q = (document.getElementById('q').value || '').toLowerCase().trim();
+        let f = document.getElementById('filter').value;
 
-        var a = all.filter(function (p) {
-            var asgnSt = p.assignment ? p.assignment.status : (p.status === 'completed' ? 'completed' : (p.status === 'progress' ? 'active' : 'planning'));
-            var matchesFilter = !f || asgnSt === f || p.status === f;
-            var hay = [p.title, p.area, p.sector, p.supplier, p.reference].join(' ').toLowerCase();
-            var matchesQuery = !q || hay.indexOf(q) > -1;
+        let a = all.filter(function (p) {
+            let asgnSt = p.assignment ? p.assignment.status : (p.status === 'completed' ? 'completed' : (p.status === 'progress' ? 'active' : 'planning'));
+            let matchesFilter = !f || asgnSt === f || p.status === f;
+            let hay = [p.title, p.area, p.sector, p.supplier, p.reference].join(' ').toLowerCase();
+            let matchesQuery = !q || hay.indexOf(q) > -1;
             return matchesFilter && matchesQuery;
         });
 

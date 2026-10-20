@@ -30,13 +30,13 @@ require_role('ddo');
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="ddo.js"></script>
+<script src='ddo.js?v=20261020'></script>
 <script>
-    var id = new URLSearchParams(location.search).get('id');
-    var currentProject = null;
-    var allContractors = [];
-    var currentAssignment = null;
-    var currentUpdates = [];
+    let id = new URLSearchParams(location.search).get('id');
+    let currentProject = null;
+    let allContractors = [];
+    let currentAssignment = null;
+    let currentUpdates = [];
 
     function render() {
         if (!currentProject) {
@@ -44,18 +44,18 @@ require_role('ddo');
             return;
         }
 
-        var p = currentProject;
-        var asgn = currentAssignment || {};
-        var updates = currentUpdates || [];
+        let p = currentProject;
+        let asgn = currentAssignment || {};
+        let updates = currentUpdates || [];
 
-        var contractorOptions = '<option value="">-- Select an available contractor --</option>';
+        let contractorOptions = '<option value="">-- Select an available contractor --</option>';
         allContractors.forEach(function (c) {
-            var selected = (asgn.contractor_id && Number(asgn.contractor_id) === Number(c.id)) ? ' selected' : '';
-            var title = c.company_name ? (c.company_name + ' (' + c.full_name + ')') : c.full_name;
+            let selected = (asgn.contractor_id && Number(asgn.contractor_id) === Number(c.id)) ? ' selected' : '';
+            let title = c.company_name ? (c.company_name + ' (' + c.full_name + ')') : c.full_name;
             contractorOptions += '<option value="' + DDO.esc(c.id) + '"' + selected + '>' + DDO.esc(title) + '</option>';
         });
 
-        var updatesHtml = '';
+        let updatesHtml = '';
         if (updates.length > 0) {
             updatesHtml = updates.map(function (u) {
                 return '<div class="border-bottom pb-3 mb-3">' +
@@ -71,7 +71,7 @@ require_role('ddo');
             updatesHtml = '<p class="text-muted small mb-0">No progress updates have been submitted by the contractor yet.</p>';
         }
 
-        var html = '<div class="row g-4">' +
+        let html = '<div class="row g-4">' +
             '<div class="col-lg-7">' +
                 '<div class="ddo-panel mb-4">' +
                     '<div class="ddo-panel-header">' +
@@ -184,20 +184,20 @@ require_role('ddo');
 
         document.getElementById('assignForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            var form = this;
-            var contractorId = form.contractor_id.value;
-            var supervisor = form.supervisor.value.trim();
-            var scope = form.scope.value.trim();
-            var start = form.start.value;
-            var end = form.end.value;
-            var status = form.status.value;
+            let form = this;
+            let contractorId = form.contractor_id.value;
+            let supervisor = form.supervisor.value.trim();
+            let scope = form.scope.value.trim();
+            let start = form.start.value;
+            let end = form.end.value;
+            let status = form.status.value;
 
             if (!contractorId) {
                 document.getElementById('alert').innerHTML = '<div class="alert alert-warning alert-dismissible fade show" role="alert">Please select an available contractor.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
                 return;
             }
 
-            var btn = document.getElementById('saveBtn');
+            let btn = document.getElementById('saveBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving assignment…';
 
