@@ -1,8 +1,13 @@
-// Replaces the inline <script> at the bottom of auth.php.
-// Keeps the role switcher and now signs in / registers through the PHP API.
+// Staff sign-in / registration page (auth.php).
+// Keeps the role switcher and signs in / registers through the PHP API.
+// The selected role is stored in two hidden fields (#loginRole and #regRole)
+// and that hidden value is what gets sent to the server.
 (function () {
     "use strict";
 
+    // approval: true  -> the account waits for the District Development Officer.
+    // This only controls the notice on the form. The server decides using
+    // ROLES_REQUIRING_APPROVAL in config/database.php, so keep the two in step.
     let ROLES = {
         council: {
             title: "District Council",
@@ -10,7 +15,8 @@
             text: "Propose development projects for your area and follow each one through review.",
             tasks: ["Submit project proposals", "Track proposals and decisions", "See citizen priority rankings"],
             dest: "District Council workspace",
-            extra: ["Council or ward", "Position"]
+            extra: ["Council or ward", "Position"],
+            approval: true
         },
         mp: {
             title: "Member of Parliament",
@@ -18,7 +24,8 @@
             text: "Review proposals, weigh citizen votes and record decisions for your constituency.",
             tasks: ["Approve or reject proposals", "Verify fund allocations", "Monitor delivery progress"],
             dest: "MP workspace",
-            extra: ["Constituency", "Parliamentary office"]
+            extra: ["Constituency", "Parliamentary office"],
+            approval: false
         },
         ddo: {
             title: "District Development Officer",
@@ -26,7 +33,8 @@
             text: "Turn approved projects into delivered results with funds, suppliers and timelines.",
             tasks: ["Allocate and track funds", "Assign suppliers and supervisors", "Publish progress reports"],
             dest: "DDO workspace",
-            extra: ["District", "Employee or staff number"]
+            extra: ["District", "Employee or staff number"],
+            approval: false
         },
         contractor: {
             title: "Contractor",
@@ -34,18 +42,23 @@
             text: "Deliver assigned projects and keep the district office updated on site progress.",
             tasks: ["View assigned projects", "Upload milestones and photos", "Submit completion reports"],
             dest: "Contractor workspace",
-            extra: ["Company name", "Business registration number"]
+            extra: ["Company name", "Business registration number"],
+            approval: true
         }
     };
 
     let card = document.getElementById("authCard");
-    let current = "council";
     let csrf = null;
 
     /* ---------- Role switcher ---------- */
     function setRole(key) {
         let r = ROLES[key];
-        current = key;
+        if (!r) return;
+
+        // The hidden fields are the single source of truth for the role.
+        document.getElementById("loginRole").value = key;
+        document.getElementById("regRole").value = key;
+
         card.setAttribute("data-role", key);
         document.getElementById("asideTitle").textContent = r.title;
         document.getElementById("asideIcon").className = "bi " + r.icon;
@@ -56,6 +69,18 @@
         }).join("");
         document.getElementById("extra1Label").textContent = r.extra[0];
         document.getElementById("extra2Label").textContent = r.extra[1];
+
+        // Only roles that need approval see the notice.
+        let note = document.getElementById("approvalNote");
+        if (r.approval) {
+            note.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> ' +
+                "A " + r.title + " account must be approved by the District Development Officer " +
+                "before you can sign in.";
+            note.classList.remove("d-none");
+        } else {
+            note.textContent = "";
+            note.classList.add("d-none");
+        }
 
         // MPs pick their constituency from the database list.
         let extra1 = document.getElementById("extra1");
@@ -69,7 +94,7 @@
         clearAlerts();
     }
 
-    document.querySelectorAll('input[name="role"]').forEach(function (input) {
+    document.querySelectorAll('input[name="role"][type="radio"]').forEach(function (input) {
         input.addEventListener("change", function () { setRole(this.value); });
     });
 
@@ -145,7 +170,7 @@
         e.preventDefault();
         busy(loginForm, true, "Signing in…");
         post("api/login.php", {
-            role: current,
+            role: val("loginRole"),               // hidden field
             email: val("loginId").trim(),
             password: val("loginPw"),
             remember: document.getElementById("remember").checked
@@ -169,7 +194,7 @@
         }
         busy(registerForm, true, "Creating account…");
         post("api/register.php", {
-            role: current,
+            role: val("regRole"),                 // hidden field
             full_name: val("regName").trim(),
             email: val("regEmail").trim(),
             extra1: val("extra1").trim(),
@@ -184,11 +209,13 @@
                 return;
             }
             if (!res.pending) {
+                // MP and DDO accounts are active at once: go straight to the workspace.
                 window.location.href = res.redirect;
                 return;
             }
-            // Staff accounts wait for approval: send them to the sign-in tab.
+            // Council and contractor accounts wait for approval: send them to the sign-in tab.
             registerForm.reset();
+            setRole(val("regRole"));
             bootstrap.Tab.getOrCreateInstance(document.getElementById("login-tab")).show();
             showAlert(loginForm, res.message, "success");
         });

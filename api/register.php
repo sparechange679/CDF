@@ -89,7 +89,10 @@ switch ($role) {
 }
 
 /* ---- Create the account ---- */
-$status = ($role === 'citizen' || !STAFF_REQUIRE_APPROVAL) ? 'active' : 'pending';
+// Only the roles listed in ROLES_REQUIRING_APPROVAL (config/database.php) wait for the DDO.
+// Citizens, MPs and DDOs are active straight away.
+$needsApproval = STAFF_REQUIRE_APPROVAL && in_array($role, ROLES_REQUIRING_APPROVAL, true);
+$status        = $needsApproval ? 'pending' : 'active';
 
 try {
     $pdo->beginTransaction();
@@ -137,5 +140,5 @@ if ($status === 'active') {
 json_out([
     'ok'      => true,
     'pending' => true,
-    'message' => 'Account created. You can sign in once the district office approves it.',
+    'message' => 'Account created. You can sign in once the District Development Officer approves it.',
 ], 201);

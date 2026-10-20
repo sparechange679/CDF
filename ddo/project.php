@@ -1,22 +1,6 @@
 <?php
-require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+include 'includes/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Manage Project | DDO Workspace</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../css/style.css" rel="stylesheet">
-    <link href="ddo.css" rel="stylesheet">
-</head>
-<body class="ddo-shell">
-
-<?php include __DIR__ . '/../includes/topbar.php'; ?>
 
 <nav class="navbar navbar-expand-lg sticky-top ddo-nav">
     <div class="container"><a class="navbar-brand" href="index.php"><span class="ddo-brand-mark"><i
@@ -26,16 +10,20 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         <div><a class="btn btn-outline-gov btn-sm" href="projects.php">Back to projects</a></div>
     </div>
 </nav>
+
 <main class="container py-5">
     <div id="content"></div>
 </main>
+
 <footer>
     <div class="container">
         <div class="footer-bottom text-center mt-0">DDO Workspace · <a href="../index.php">Citizen portal</a></div>
     </div>
 </footer>
+
 <script src="ddo.js"></script>
-<script>var id = new URLSearchParams(location.search).get('id'), all = DDO.get(), p = all.filter(function (x) {
+<script>
+    let id = new URLSearchParams(location.search).get('id'), all = DDO.get(), p = all.filter(function (x) {
         return x.id === id
     })[0] || all[0];
 
@@ -58,6 +46,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         })
     }
 
-    render();</script>
+    render();
+</script>
 </body>
 </html>
