@@ -38,7 +38,16 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                         class="bi bi-clipboard2-pulse"></i></span>
             <div>Contractor Workspace<small class="text-muted d-block">District delivery office</small></div>
         </a>
-        <div><a class="btn btn-outline-gov btn-sm" href="index.php">Overview</a></div>
+        <button class='navbar-toggler' data-bs-toggle='collapse' data-bs-target='#ddoNav'>
+            <span class='navbar-toggler-icon'></span>
+        </button>
+        <div class='collapse navbar-collapse' id='ddoNav'>
+            <ul class='navbar-nav ms-auto align-items-lg-center'>
+                <li><a class='nav-link' href='index.php'>Overview</a></li>
+                <li><a class='nav-link' href='projects.php'>Priority projects</a></li>
+                <li><a class='nav-link active' href='reports.php'>Reports &amp; results</a></li>
+            </ul>
+        </div>
     </div>
 </nav>
 <main class="container py-5">

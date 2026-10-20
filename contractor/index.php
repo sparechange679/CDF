@@ -35,11 +35,6 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     <li><a class="nav-link active" href="index.php">Overview</a></li>
                     <li><a class="nav-link" href="projects.php">Priority projects</a></li>
                     <li><a class="nav-link" href="reports.php">Reports &amp; results</a></li>
-                    <li class="ms-lg-2">
-                        <a class="btn btn-cdf btn-sm" href="../mp/index.php">
-                            <i class="bi bi-arrow-left me-1"></i> MP workspace
-                        </a>
-                    </li>
                 </ul>
             </div>
         </div>
