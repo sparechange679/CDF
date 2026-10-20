@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+require_role('council', '../auth.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,9 +59,11 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             <h2 class="h5 mb-1">Priority ranking</h2>
                             <p class="text-muted small mb-0">Ranked by votes received from citizens.</p>
                         </div>
-                        <span class="badge text-bg-light" id="total"></span>
+                        <span class="badge text-bg-light" id="total">0 total votes</span>
                     </div>
-                    <div class="vdc-panel-body" id="ranking"></div>
+                    <div class="vdc-panel-body" id="ranking">
+                        <p class="text-muted">Loading priority rankings…</p>
+                    </div>
                 </div>
             </div>
 
@@ -77,9 +78,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             readiness, cost, and whether the proposal serves people who have fewer alternatives.
                         </p>
                         <div class="vdc-callout small">
-                            <strong>Next committee review</strong><br>
-                            30 August 2026<br>
-                            <span class="text-muted">Bring the top three proposals and their supporting evidence.</span>
+                            <strong>Manage Citizen Voting</strong><br>
+                            Open or close voting for projects in the <a href="decisions.php">Decisions register</a>.<br>
+                            <span class="text-muted">Citizens can only cast votes on open projects.</span>
                         </div>
                     </div>
                 </div>
@@ -95,33 +96,62 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="vdc.js"></script>
     <script>
-        var list = DC.get().slice().sort(function (a, b) {
-            return b.votes - a.votes;
-        });
+        function esc(s) {
+            var d = document.createElement('div');
+            d.textContent = s == null ? '' : String(s);
+            return d.innerHTML;
+        }
 
-        var total = list.reduce(function (s, p) {
-            return s + p.votes;
-        }, 0);
+        function renderList(list) {
+            var sorted = list.slice().sort(function (a, b) {
+                return Number(b.votes || 0) - Number(a.votes || 0);
+            });
 
-        document.getElementById('total').textContent = total.toLocaleString() + ' total votes';
+            var total = sorted.reduce(function (s, p) {
+                return s + Number(p.votes || 0);
+            }, 0);
 
-        document.getElementById('ranking').innerHTML = list.map(function (p, i) {
-            var pct = total ? Math.round(p.votes / total * 100) : 0;
+            document.getElementById('total').textContent = total.toLocaleString() + ' total votes';
 
-            return '<div class="d-flex align-items-center gap-3 mb-4">' +
-                '<span class="vdc-rank ' + (i === 0 ? 'first' : '') + '">' + (i + 1) + '</span>' +
-                '<div class="flex-grow-1">' +
-                '<div class="d-flex justify-content-between gap-2 small mb-1">' +
-                '<strong>' + p.title + '</strong>' +
-                '<span class="vote-count">' + p.votes.toLocaleString() + '</span>' +
-                '</div>' +
-                '<div class="vdc-progress"><div class="progress-bar" style="width:' + pct + '%"></div></div>' +
-                '<div class="vdc-kicker mt-1">' + p.area + ' · ' + p.sector + ' · ' + pct + '% of votes</div>' +
-                '</div>' +
-                '</div>';
-        }).join('');
+            if (!sorted.length) {
+                document.getElementById('ranking').innerHTML = '<p class="vdc-empty mb-0">No project proposals available.</p>';
+                return;
+            }
+
+            document.getElementById('ranking').innerHTML = sorted.map(function (p, i) {
+                var v = Number(p.votes || 0);
+                var pct = total ? Math.round(v / total * 100) : 0;
+                var isOpen = Number(p.voting_open) === 1;
+
+                return '<div class="d-flex align-items-center gap-3 mb-4">' +
+                    '<span class="vdc-rank ' + (i === 0 ? 'first' : '') + '">' + (i + 1) + '</span>' +
+                    '<div class="flex-grow-1">' +
+                    '<div class="d-flex justify-content-between gap-2 small mb-1">' +
+                    '<strong>' + esc(p.title) + (!isOpen ? ' <span class="badge text-bg-secondary ms-1">Voting closed</span>' : '') + '</strong>' +
+                    '<span class="vote-count">' + v.toLocaleString() + '</span>' +
+                    '</div>' +
+                    '<div class="vdc-progress"><div class="progress-bar" style="width:' + pct + '%"></div></div>' +
+                    '<div class="vdc-kicker mt-1">' + esc(p.area) + ' · ' + esc(p.sector) + ' · ' + pct + '% of votes</div>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        fetch('../api/projects.php', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.ok && Array.isArray(d.projects) && d.projects.length > 0) {
+                    renderList(d.projects);
+                } else {
+                    renderList(DC.get());
+                }
+            })
+            .catch(function () {
+                renderList(DC.get());
+            });
     </script>
 </body>
 </html>

@@ -37,9 +37,6 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 <li class="nav-item"><a class="nav-link" href="vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a></li>
                 <li class="nav-item"><a class="nav-link" href="feedback.php"><i class="bi bi-chat-left-text me-1"></i> Feedback</a></li>
                 <li class="nav-item"><a class="nav-link active" href="track.php"><i class="bi bi-geo-alt me-1"></i> Track</a></li>
-                <li class="nav-item ms-lg-2">
-                    <a class="nav-link btn-login" href="login.php"><i class="bi bi-person-circle me-1"></i> Login</a>
-                </li>
             </ul>
         </div>
     </div>
@@ -113,11 +110,11 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <div class="col-md-3">
                 <h5>Contact</h5>
                 <a href="#"><i class="bi bi-envelope me-1"></i> cdf@localgov.mw</a>
-                <a href="#"><i class="bi bi-telephone me-1"></i> +265 1 789 000</a>
+                <a href="#"><i class="bi bi-telephone me-1"></i> +265 994 507 343</a>
             </div>
         </div>
         <div class="footer-bottom text-center">
-            <p class="mb-0">© 2026 Government of Malawi • Constituency Development Fund (CDF) Citizen Monitoring System</p>
+            <p class="mb-0">&copy; 2026 Government of Malawi • Constituency Development Fund (CDF) Citizen Monitoring System</p>
         </div>
     </div>
 </footer>
@@ -126,17 +123,17 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 <script src="js/app.js"></script>
 <script>
     (function () {
-        var select = document.getElementById("trackSelect");
-        var filter = document.getElementById("completeFilter");
+        let select = document.getElementById("trackSelect");
+        let filter = document.getElementById("completeFilter");
 
         function fillSelect() {
-            var mode = filter.value;
-            var items = CDF.citizenProjects().filter(function (p) {
+            let mode = filter.value;
+            let items = CDF.citizenProjects().filter(function (p) {
                 if (mode === "yes") return p.complete;
                 if (mode === "no") return !p.complete;
                 return true;
             });
-            var current = select.value;
+            let current = select.value;
             select.innerHTML = items.map(function (p) {
                 return '<option value="' + p.id + '">' + p.title + " — " + p.constituency + "</option>";
             }).join("");
@@ -145,14 +142,14 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         }
 
         function render() {
-            var p = CDF.findProject(select.value);
-            var box = document.getElementById("track-detail");
+            let p = CDF.findProject(select.value);
+            let box = document.getElementById("track-detail");
             if (!p) {
                 box.innerHTML = '<p class="text-muted mb-0">No projects match this filter.</p>';
                 document.getElementById("snapshot").innerHTML = "";
                 return;
             }
-            var timeline = p.updates.map(function (u) {
+            let timeline = p.updates.map(function (u) {
                 return '<div class="timeline-item"><div class="small text-muted">' + u.date + '</div><div>' + u.text + "</div></div>";
             }).join("");
             box.innerHTML =
@@ -167,8 +164,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 '<div class="timeline">' + timeline + "</div>" +
                 '<a class="btn btn-outline-gov btn-sm mt-2" href="feedback.php?project=' + p.id + '">Give feedback</a>';
 
-            var all = CDF.citizenProjects();
-            var done = all.filter(function (x) { return x.complete; }).length;
+            let all = CDF.citizenProjects();
+            let done = all.filter(function (x) { return x.complete; }).length;
             document.getElementById("snapshot").innerHTML =
                 '<p class="mb-2"><span class="status-badge ' + CDF.statusClass(p.status) + '">' + p.statusLabel + "</span> " +
                 (p.complete

@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+$me = require_role('mp', '../auth.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,8 +26,18 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     <small class="text-muted d-block">Constituency oversight</small>
                 </div>
             </a>
-            <div>
-                <a class="btn btn-outline-gov btn-sm" href="index.php">Overview</a>
+            <button class='navbar-toggler' data-bs-toggle='collapse' data-bs-target='#nav'>
+                <span class='navbar-toggler-icon'></span>
+            </button>
+            <div class='collapse navbar-collapse' id='nav'>
+                <ul class='navbar-nav ms-auto'>
+                    <li><a class='nav-link' href='index.php'>Overview</a></li>
+                    <li><a class='nav-link' href='projects.php'>All proposals</a></li>
+                    <li><a class='nav-link' href='decisions.php'>Decisions</a></li>
+                    <li><a class='nav-link' href='allocations.php'>Funds &amp; DDO</a></li>
+                    <li><a class='nav-link active' href='progress.php'>Progress</a></li>
+                    <li><a class='nav-link' href='reports.php'>Reports</a></li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -37,10 +46,10 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         <div class="mb-4">
             <div class="mp-eyebrow text-dark">Delivery monitoring</div>
             <h1 class="h2">Project progress and status updates</h1>
-            <p class="text-muted">Record the latest verified progress note for projects in implementation.</p>
+            <p class="text-muted">Monitor implementation progress and inspect updates for accepted projects in your constituency.</p>
         </div>
 
-        <div id="list" class="row g-4"></div>
+        <div id="list" class="row g-4"><div class="col-12"><div class="mp-panel mp-empty">Loading progress updates…</div></div></div>
     </main>
 
     <footer>
@@ -51,21 +60,28 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         </div>
     </footer>
 
-    <script src="mp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="mp.js?v=20261020"></script>
     <script>
-        var all = MP.get();
+        MP.load(function (err, all) {
+            if (err) {
+                document.getElementById('list').innerHTML = '<div class="col-12"><div class="alert alert-danger">' + MP.esc(err.message) + '</div></div>';
+                return;
+            }
 
-        function render() {
-            document.getElementById('list').innerHTML = all.filter(function (p) {
+            var esc = MP.esc;
+            var filtered = all.filter(function (p) {
                 return ['accepted', 'progress', 'completed'].indexOf(p.status) > -1;
-            }).map(function (p) {
+            });
+
+            document.getElementById('list').innerHTML = filtered.length ? filtered.map(function (p) {
                 return '<div class="col-lg-6">' +
                     '<div class="mp-panel">' +
                     '<div class="mp-panel-body">' +
                     '<div class="d-flex justify-content-between gap-2">' +
                     '<div>' +
-                    '<h2 class="h5 mb-1">' + p.title + '</h2>' +
-                    '<div class="mp-kicker">' + p.area + ' · ' + p.sector + '</div>' +
+                    '<h2 class="h5 mb-1">' + esc(p.title) + '</h2>' +
+                    '<div class="mp-kicker">' + esc(p.area) + ' · ' + esc(p.sector) + '</div>' +
                     '</div>' +
                     MP.badge(p) +
                     '</div>' +
@@ -76,41 +92,20 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     '<div class="mp-progress mb-3">' +
                     '<div class="progress-bar" style="width:' + (p.progress || 0) + '%"></div>' +
                     '</div>' +
-                    '<p class="small text-muted">' +
-                    (p.lastUpdate
-                        ? 'Last update: ' + p.lastUpdate + ' · ' + p.updateNote
-                        : 'No MP progress update recorded yet.') +
+                    '<p class="small text-muted mb-3">' +
+                    (p.reason
+                        ? 'MP decision note: ' + esc(p.reason)
+                        : 'No additional progress note recorded.') +
                     '</p>' +
-                    '<form class="update row g-2" data-id="' + p.id + '">' +
-                    '<div class="col-4">' +
-                    '<input name="progress" type="number" min="0" max="100" value="' + (p.progress || 0) + '" class="form-control" aria-label="Progress percentage">' +
+                    '<div class="d-flex justify-content-between align-items-center">' +
+                    '<span class="small text-muted">' + Number(p.votes || 0).toLocaleString() + ' citizen votes</span>' +
+                    '<a class="btn btn-outline-gov btn-sm" href="review.php?id=' + encodeURIComponent(p.id) + '">Open review</a>' +
                     '</div>' +
-                    '<div class="col-8">' +
-                    '<input name="date" class="form-control" required placeholder="Update date">' +
-                    '</div>' +
-                    '<div class="col-12">' +
-                    '<input name="note" class="form-control" required placeholder="Verified progress note">' +
-                    '</div>' +
-                    '<div class="col-12">' +
-                    '<button class="btn btn-cdf btn-sm" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Save update</button>' +
-                    '</div>' +
-                    '</form>' +
                     '</div>' +
                     '</div>' +
                     '</div>';
-            }).join('') || '<div class="col-12"><div class="mp-panel mp-empty">No accepted projects are ready for progress tracking.</div></div>';
-
-            document.querySelectorAll('.update').forEach(function (f) {
-                f.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    MP.updateProgress(this.dataset.id, this);
-                    all = MP.get();
-                    render();
-                });
-            });
-        }
-
-        render();
+            }).join('') : '<div class="col-12"><div class="mp-panel mp-empty">No accepted projects are currently in progress.</div></div>';
+        });
     </script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+$me = require_role('mp', '../auth.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,8 +26,18 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     <small class="text-muted d-block">Constituency oversight</small>
                 </div>
             </a>
-            <div>
-                <a class="btn btn-outline-gov btn-sm" href="index.php">Overview</a>
+            <button class='navbar-toggler' data-bs-toggle='collapse' data-bs-target='#nav'>
+                <span class='navbar-toggler-icon'></span>
+            </button>
+            <div class='collapse navbar-collapse' id='nav'>
+                <ul class='navbar-nav ms-auto'>
+                    <li><a class='nav-link' href='index.php'>Overview</a></li>
+                    <li><a class='nav-link' href='projects.php'>All proposals</a></li>
+                    <li><a class='nav-link active' href='decisions.php'>Decisions</a></li>
+                    <li><a class='nav-link' href='allocations.php'>Funds &amp; DDO</a></li>
+                    <li><a class='nav-link' href='progress.php'>Progress</a></li>
+                    <li><a class='nav-link' href='reports.php'>Reports</a></li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -52,7 +61,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody id="rows"></tbody>
+                    <tbody id="rows">
+                        <tr><td colspan="5" class="mp-empty">Loading decisions…</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -66,24 +77,33 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         </div>
     </footer>
 
-    <script src="mp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="mp.js?v=20261020"></script>
     <script>
-        var a = MP.get().filter(function (p) {
-            return ['accepted', 'denied', 'progress', 'completed'].indexOf(p.status) > -1;
-        });
+        MP.load(function (err, projects, constituency) {
+            if (err) {
+                document.getElementById('rows').innerHTML = '<tr><td colspan="5" class="mp-empty">Failed to load decisions.</td></tr>';
+                return;
+            }
 
-        document.getElementById('rows').innerHTML = a.map(function (p) {
-            return '<tr>' +
-                '<td>' +
-                '<strong>' + p.title + '</strong>' +
-                '<div class="mp-kicker">' + p.area + ' · ' + p.votes.toLocaleString() + ' citizen votes</div>' +
-                '</td>' +
-                '<td>' + (p.decisionDate || 'Inherited from VDC') + '</td>' +
-                '<td>' + MP.badge(p) + '</td>' +
-                '<td class="small">' + (p.reason || 'Approved for funding and delivery.') + '</td>' +
-                '<td><a class="btn btn-outline-gov btn-sm" href="review.php?id=' + p.id + '">Open record</a></td>' +
-                '</tr>';
-        }).join('') || '<tr><td colspan="5" class="mp-empty">No decisions recorded yet.</td></tr>';
+            var esc = MP.esc;
+            var a = projects.filter(function (p) {
+                return ['accepted', 'denied', 'progress', 'completed'].indexOf(p.status) > -1 || !!p.reason;
+            });
+
+            document.getElementById('rows').innerHTML = a.length ? a.map(function (p) {
+                return '<tr>' +
+                    '<td>' +
+                    '<strong>' + esc(p.title) + '</strong>' +
+                    '<div class="mp-kicker">' + esc(p.area) + ' · ' + Number(p.votes || 0).toLocaleString() + ' citizen votes</div>' +
+                    '</td>' +
+                    '<td>' + esc(p.decision_date || p.submitted || '—') + '</td>' +
+                    '<td>' + MP.badge(p) + '</td>' +
+                    '<td class="small">' + (p.reason ? esc(p.reason) : '<span class="text-muted">Approved for funding and delivery.</span>') + '</td>' +
+                    '<td><a class="btn btn-outline-gov btn-sm" href="review.php?id=' + encodeURIComponent(p.id) + '">Open record</a></td>' +
+                    '</tr>';
+            }).join('') : '<tr><td colspan="5" class="mp-empty">No decisions recorded yet.</td></tr>';
+        });
     </script>
 </body>
 </html>

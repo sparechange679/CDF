@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+$me = require_role('mp', '../auth.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,24 +44,26 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 
     <header class="mp-hero">
         <div class="container">
-            <div class="mp-eyebrow">Proposal register</div>
-            <h1 class="h2">All VDC proposals</h1>
-            <p class="mb-0">Search every local project, inspect citizen support, and open a full review record.</p>
+            <div class="mp-eyebrow" id="hero-constituency">Parliamentary constituency</div>
+            <h1 class="h2">Constituency development proposals</h1>
+            <p class="mb-0">Search local projects within your constituency, inspect citizen votes, and record approval or rejection decisions.</p>
         </div>
     </header>
 
     <main class="container py-5">
+        <div id="alert"></div>
         <div class="mp-panel">
             <div class="mp-panel-header">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Search</label>
-                        <input id="q" class="form-control" placeholder="Project, area, sector, or VDC">
+                        <label class="form-label small fw-semibold" for="q">Search</label>
+                        <input id="q" class="form-control" placeholder="Project title, area, sector, or proposer">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Status</label>
+                        <label class="form-label small fw-semibold" for="filter">Status</label>
                         <select id="filter" class="form-select">
                             <option value="">All statuses</option>
+                            <option value="submitted">Submitted</option>
                             <option value="review">Under review</option>
                             <option value="accepted">Accepted</option>
                             <option value="denied">Denied</option>
@@ -70,7 +71,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             <option value="completed">Completed</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-2 text-md-end">
                         <span id="count" class="small text-muted"></span>
                     </div>
                 </div>
@@ -86,7 +87,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody id="rows"></tbody>
+                    <tbody id="rows">
+                        <tr><td colspan="5" class="mp-empty">Loading proposals…</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -100,29 +103,42 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         </div>
     </footer>
 
-    <script src="mp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="mp.js?v=20261020"></script>
     <script>
-        var all = MP.get();
+        var all = [];
 
         function render() {
-            var q = document.getElementById('q').value.toLowerCase();
+            var q = document.getElementById('q').value.toLowerCase().trim();
             var f = document.getElementById('filter').value;
 
             var a = all.filter(function (p) {
-                return (!f || p.status === f) &&
-                    (!q || (p.title + ' ' + p.area + ' ' + p.sector + ' ' + p.proposer).toLowerCase().indexOf(q) > -1);
+                var hay = [p.title, p.area, p.sector, p.proposer, p.reference].join(' ').toLowerCase();
+                return (!f || p.status === f) && (!q || hay.indexOf(q) > -1);
             });
 
             document.getElementById('rows').innerHTML = a.length
                 ? a.map(MP.row).join('')
-                : '<tr><td colspan="5" class="mp-empty">No proposals match your filters.</td></tr>';
+                : '<tr><td colspan="5" class="mp-empty">' + (all.length ? 'No proposals match your filters.' : 'No proposals found in your constituency.') + '</td></tr>';
 
             document.getElementById('count').textContent = a.length + ' project' + (a.length === 1 ? '' : 's');
         }
 
+        MP.load(function (err, projects, constituency) {
+            if (err) {
+                document.getElementById('alert').innerHTML = '<div class="alert alert-danger">' + MP.esc(err.message) + '</div>';
+                document.getElementById('rows').innerHTML = '<tr><td colspan="5" class="mp-empty">Unable to load projects.</td></tr>';
+                return;
+            }
+            if (constituency) {
+                document.getElementById('hero-constituency').textContent = constituency.name + ' Constituency · ' + (constituency.district || 'Malawi');
+            }
+            all = projects;
+            render();
+        });
+
         document.getElementById('q').addEventListener('input', render);
         document.getElementById('filter').addEventListener('change', render);
-        render();
     </script>
 </body>
 </html>

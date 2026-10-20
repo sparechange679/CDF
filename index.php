@@ -37,9 +37,6 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 <li class="nav-item"><a class="nav-link" href="vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a></li>
                 <li class="nav-item"><a class="nav-link" href="feedback.php"><i class="bi bi-chat-left-text me-1"></i> Feedback</a></li>
                 <li class="nav-item"><a class="nav-link" href="track.php"><i class="bi bi-geo-alt me-1"></i> Track</a></li>
-                <li class="nav-item ms-lg-2">
-                    <a class="nav-link btn-login" href="login.php"><i class="bi bi-person-circle me-1"></i> Login</a>
-                </li>
             </ul>
         </div>
     </div>
@@ -61,15 +58,6 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             </a>
             <a href="vote.php" class="btn btn-outline-light btn-lg">
                 Cast Your Vote
-            </a>
-            <a href="vdc/index.php" class="btn btn-outline-light btn-lg">
-                <i class="bi bi-diagram-3 me-2"></i>VDC Workspace
-            </a>
-            <a href="mp/index.php" class="btn btn-outline-light btn-lg">
-                <i class="bi bi-bank me-2"></i>MP Workspace
-            </a>
-            <a href="ddo/index.php" class="btn btn-outline-light btn-lg">
-                <i class="bi bi-clipboard2-pulse me-2"></i>DDO Workspace
             </a>
         </div>
     </div>
@@ -190,13 +178,13 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <div class="col-md-3">
                 <h5>Contact</h5>
                 <a href="#"><i class="bi bi-envelope me-1"></i> cdf@localgov.mw</a>
-                <a href="#"><i class="bi bi-telephone me-1"></i> +265 1 789 000</a>
+                <a href="#"><i class="bi bi-telephone me-1"></i> +265 994 507 343</a>
                 <a href="#"><i class="bi bi-geo-alt me-1"></i> Ministry of Local Government, Lilongwe</a>
             </div>
         </div>
         <div class="footer-bottom text-center">
             <p class="mb-0">
-                © 2026 Government of Malawi • Ministry of Local Government &amp; Rural Development<br>
+                &copy; 2026 Government of Malawi • Ministry of Local Government &amp; Rural Development<br>
                 Constituency Development Fund (CDF) Citizen Monitoring System
             </p>
         </div>
@@ -207,7 +195,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 <script src="js/app.js"></script>
 <script>
     (function () {
-        var approved = CDF.approvedProjects();
+        let approved = CDF.approvedProjects();
         document.getElementById("stat-active").textContent = approved.length;
         document.getElementById("stat-votes").textContent = CDF.votesForProjects(approved).toLocaleString();
         document.getElementById("stat-progress").textContent = approved.filter(function (p) { return p.status === "progress"; }).length;

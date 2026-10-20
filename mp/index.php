@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+$me = require_role('mp', '../auth.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,11 +37,6 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     <li><a class="nav-link" href="allocations.php">Funds &amp; DDO</a></li>
                     <li><a class="nav-link" href="progress.php">Progress</a></li>
                     <li><a class="nav-link" href="reports.php">Reports</a></li>
-                    <li class="ms-lg-2">
-                        <a class="btn btn-cdf btn-sm" href="../vdc/index.php">
-                            <i class="bi bi-arrow-left me-1"></i> VDC workspace
-                        </a>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -50,11 +44,10 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 
     <header class="mp-hero">
         <div class="container">
-            <div class="mp-eyebrow mb-2">Parliamentary constituency oversight · 2026</div>
+            <div class="mp-eyebrow mb-2" id="hero-kicker">Parliamentary constituency oversight</div>
             <h1>Decide, fund, and account for local development.</h1>
             <p class="lead mb-4">
-                Review VDC proposals, use citizen votes to guide priorities, verify DDO allocations,
-                and keep implementation progress visible.
+                Review constituency proposals, use citizen votes to guide priorities, record approval and rejection decisions with reasons, and keep implementation progress visible.
             </p>
             <a class="btn btn-light fw-semibold" href="projects.php">
                 <i class="bi bi-clipboard-data me-2"></i>Review proposals
@@ -64,7 +57,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 
     <main class="container py-5">
 
-        <div class="row g-3 mb-4" id="stats"></div>
+        <div class="row g-3 mb-4" id="stats">
+            <div class="col-12 text-muted">Loading workspace metrics…</div>
+        </div>
 
         <div class="row g-4">
             <div class="col-lg-8">
@@ -72,7 +67,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     <div class="mp-panel-header d-flex justify-content-between align-items-center">
                         <div>
                             <h2 class="h5 mb-1">Action queue</h2>
-                            <p class="text-muted small mb-0">Proposals requiring review or already moving through delivery.</p>
+                            <p class="text-muted small mb-0">Constituency proposals requiring review or already moving through delivery.</p>
                         </div>
                         <a href="projects.php" class="btn btn-outline-gov btn-sm">Open register</a>
                     </div>
@@ -87,7 +82,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                                     <th></th>
                                 </tr>
                             </thead>
-                            <tbody id="queue"></tbody>
+                            <tbody id="queue">
+                                <tr><td colspan="5" class="mp-empty">Loading action queue…</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -100,8 +97,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                         <p class="text-muted small mb-0">Keep decisions and delivery records current.</p>
                     </div>
                     <div class="mp-panel-body d-grid gap-2">
-                        <a href="decisions.php" class="btn btn-cdf text-start">
-                            <i class="bi bi-check2-square me-2"></i>Record a decision
+                        <a href="projects.php" class="btn btn-cdf text-start">
+                            <i class="bi bi-check2-square me-2"></i>Record a decision &amp; reason
                         </a>
                         <a href="allocations.php" class="btn btn-outline-gov text-start">
                             <i class="bi bi-wallet2 me-2"></i>Verify funds and DDO details
@@ -114,7 +111,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                         </a>
                         <div class="mp-callout mt-3 small">
                             <strong>Automated priority</strong><br>
-                            <span id="leader"></span><br>
+                            <span id="leader">Calculating constituency leader…</span><br>
                             <span class="text-muted">Ranking combines citizen votes with project readiness.</span>
                         </div>
                     </div>
@@ -132,48 +129,61 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         </div>
     </footer>
 
-    <script src="mp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="mp.js?v=20261020"></script>
     <script>
-        var list = MP.get();
+        MP.load(function (err, list, constituency) {
+            if (err) {
+                document.getElementById('stats').innerHTML = '<div class="col-12"><div class="alert alert-danger">' + MP.esc(err.message) + '</div></div>';
+                document.getElementById('queue').innerHTML = '<tr><td colspan="5" class="mp-empty">Unable to load queue.</td></tr>';
+                return;
+            }
 
-        var review = list.filter(function (p) {
-            return p.status === 'review' || p.status === 'submitted';
+            if (constituency) {
+                document.getElementById('hero-kicker').textContent = constituency.name + ' Constituency oversight · ' + (constituency.district || 'Malawi');
+            }
+
+            var review = list.filter(function (p) {
+                return p.status === 'review' || p.status === 'submitted';
+            });
+
+            var accepted = list.filter(function (p) {
+                return ['accepted', 'progress', 'completed'].indexOf(p.status) > -1;
+            });
+
+            var funds = list.reduce(function (s, p) {
+                return s + (p.allocation ? p.allocation.amount : 0);
+            }, 0);
+
+            document.getElementById('stats').innerHTML = [
+                ['bi-inbox', review.length, 'Awaiting MP decision', 'red'],
+                ['bi-hand-thumbs-up', list.reduce(function (s, p) {
+                    return s + (p.votes || 0);
+                }, 0).toLocaleString(), 'Citizen votes', 'blue'],
+                ['bi-wallet2', MP.money(funds), 'Allocated funds', 'green'],
+                ['bi-check-circle', accepted.length, 'Accepted or delivering', 'gold']
+            ].map(function (x) {
+                return '<div class="col-6 col-lg-3">' +
+                    '<div class="mp-panel mp-stat ' + x[3] + '">' +
+                    '<i class="bi ' + x[0] + ' text-muted"></i>' +
+                    '<div class="number">' + x[1] + '</div>' +
+                    '<div class="label">' + x[2] + '</div>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+
+            document.getElementById('queue').innerHTML = list.length
+                ? list.slice(0, 5).map(MP.row).join('')
+                : '<tr><td colspan="5" class="mp-empty">No projects found in this constituency.</td></tr>';
+
+            var ranked = list.slice().sort(function (a, b) {
+                return ((b.votes || 0) + (b.progress || 0) * 2) - ((a.votes || 0) + (a.progress || 0) * 2);
+            });
+
+            document.getElementById('leader').textContent = ranked[0]
+                ? ranked[0].title + ' leads with ' + (ranked[0].votes || 0).toLocaleString() + ' votes.'
+                : 'No proposals currently recorded.';
         });
-
-        var accepted = list.filter(function (p) {
-            return ['accepted', 'progress', 'completed'].indexOf(p.status) > -1;
-        });
-
-        var funds = list.reduce(function (s, p) {
-            return s + (p.allocation ? p.allocation.amount : 0);
-        }, 0);
-
-        document.getElementById('stats').innerHTML = [
-            ['bi-inbox', review.length, 'Awaiting MP decision', 'red'],
-            ['bi-hand-thumbs-up', list.reduce(function (s, p) {
-                return s + p.votes;
-            }, 0).toLocaleString(), 'Citizen votes', 'blue'],
-            ['bi-wallet2', MP.money(funds), 'Allocated funds', 'green'],
-            ['bi-check-circle', accepted.length, 'Accepted or delivering', 'gold']
-        ].map(function (x) {
-            return '<div class="col-6 col-lg-3">' +
-                '<div class="mp-panel mp-stat ' + x[3] + '">' +
-                '<i class="bi ' + x[0] + ' text-muted"></i>' +
-                '<div class="number">' + x[1] + '</div>' +
-                '<div class="label">' + x[2] + '</div>' +
-                '</div>' +
-                '</div>';
-        }).join('');
-
-        document.getElementById('queue').innerHTML = list.slice(0, 5).map(MP.row).join('');
-
-        var ranked = list.slice().sort(function (a, b) {
-            return (b.votes + (b.progress || 0) * 2) - (a.votes + (a.progress || 0) * 2);
-        });
-
-        document.getElementById('leader').textContent = ranked[0]
-            ? ranked[0].title + ' leads with ' + ranked[0].votes.toLocaleString() + ' votes.'
-            : '';
     </script>
 </body>
 </html>

@@ -37,9 +37,6 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 <li class="nav-item"><a class="nav-link" href="vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a></li>
                 <li class="nav-item"><a class="nav-link active" href="feedback.php"><i class="bi bi-chat-left-text me-1"></i> Feedback</a></li>
                 <li class="nav-item"><a class="nav-link" href="track.php"><i class="bi bi-geo-alt me-1"></i> Track</a></li>
-                <li class="nav-item ms-lg-2">
-                    <a class="nav-link btn-login" href="login.php"><i class="bi bi-person-circle me-1"></i> Login</a>
-                </li>
             </ul>
         </div>
     </div>
@@ -156,7 +153,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <div class="col-md-3">
                 <h5>Contact</h5>
                 <a href="#"><i class="bi bi-envelope me-1"></i> cdf@localgov.mw</a>
-                <a href="#"><i class="bi bi-telephone me-1"></i> +265 1 789 000</a>
+                <a href="#"><i class="bi bi-telephone me-1"></i> +265 994 507 343</a>
             </div>
         </div>
         <div class="footer-bottom text-center">

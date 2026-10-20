@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
-$me  = current_user();
-$tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
+$me = require_role('mp', '../auth.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,8 +26,18 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                     <small class="text-muted d-block">Constituency oversight</small>
                 </div>
             </a>
-            <div>
-                <a class="btn btn-outline-gov btn-sm" href="index.php">Overview</a>
+            <button class='navbar-toggler' data-bs-toggle='collapse' data-bs-target='#nav'>
+                <span class='navbar-toggler-icon'></span>
+            </button>
+            <div class='collapse navbar-collapse' id='nav'>
+                <ul class='navbar-nav ms-auto'>
+                    <li><a class='nav-link' href='index.php'>Overview</a></li>
+                    <li><a class='nav-link' href='projects.php'>All proposals</a></li>
+                    <li><a class='nav-link' href='decisions.php'>Decisions</a></li>
+                    <li><a class='nav-link active' href='allocations.php'>Funds &amp; DDO</a></li>
+                    <li><a class='nav-link' href='progress.php'>Progress</a></li>
+                    <li><a class='nav-link' href='reports.php'>Reports</a></li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -53,7 +62,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody id="rows"></tbody>
+                    <tbody id="rows">
+                        <tr><td colspan="6" class="mp-empty">Loading allocation records…</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -73,25 +84,32 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         </div>
     </footer>
 
-    <script src="mp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="mp.js?v=20261020"></script>
     <script>
-        var a = MP.get();
+        MP.load(function (err, a) {
+            if (err) {
+                document.getElementById('rows').innerHTML = '<tr><td colspan="6" class="mp-empty">Failed to load allocations.</td></tr>';
+                return;
+            }
 
-        document.getElementById('rows').innerHTML = a.map(function (p) {
-            var x = p.allocation;
+            var esc = MP.esc;
+            document.getElementById('rows').innerHTML = a.length ? a.map(function (p) {
+                var x = p.allocation;
 
-            return '<tr>' +
-                '<td>' +
-                '<strong>' + p.title + '</strong>' +
-                '<div class="mp-kicker">' + p.area + ' · ' + MP.badge(p) + '</div>' +
-                '</td>' +
-                '<td class="fw-semibold">' + (x ? MP.money(x.amount) : '<span class="text-muted">Pending</span>') + '</td>' +
-                '<td>' + (x ? x.ddo : '<span class="text-muted">Not assigned</span>') + '</td>' +
-                '<td class="small">' + (x ? x.reference + '<br>' + x.date : 'Awaiting DDO record') + '</td>' +
-                '<td class="small">' + (x ? x.scope : 'No approved scope recorded') + '</td>' +
-                '<td><a class="btn btn-outline-gov btn-sm" href="review.php?id=' + p.id + '">Open</a></td>' +
-                '</tr>';
-        }).join('');
+                return '<tr>' +
+                    '<td>' +
+                    '<strong>' + esc(p.title) + '</strong>' +
+                    '<div class="mp-kicker">' + esc(p.area) + ' · ' + MP.badge(p) + '</div>' +
+                    '</td>' +
+                    '<td class="fw-semibold">' + (x ? MP.money(x.amount) : '<span class="text-muted">Pending</span>') + '</td>' +
+                    '<td>' + (x ? esc(x.ddo) : '<span class="text-muted">Not assigned</span>') + '</td>' +
+                    '<td class="small">' + (x ? esc(x.reference) + '<br>' + esc(x.date) : 'Awaiting DDO record') + '</td>' +
+                    '<td class="small">' + (x ? esc(x.scope) : 'No approved scope recorded') + '</td>' +
+                    '<td><a class="btn btn-outline-gov btn-sm" href="review.php?id=' + encodeURIComponent(p.id) + '">Open</a></td>' +
+                    '</tr>';
+            }).join('') : '<tr><td colspan="6" class="mp-empty">No projects found in this constituency.</td></tr>';
+        });
     </script>
 </body>
 </html>

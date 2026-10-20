@@ -102,7 +102,7 @@ SQL;
 
 $tables['constituencies'] = <<<'SQL'
 CREATE TABLE constituencies (
-    id       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id       SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
     code     VARCHAR(40)  NOT NULL,
     name     VARCHAR(120) NOT NULL,
     district VARCHAR(60)  NOT NULL,
@@ -249,7 +249,7 @@ CREATE TABLE projects (
     budget          DECIMAL(15,2) NOT NULL,
     beneficiaries   INT UNSIGNED NULL,
     description     TEXT NOT NULL,
-    constituency_id INT UNSIGNED NOT NULL,
+    constituency_id SMALLINT UNSIGNED NOT NULL,
     submitted_by    INT UNSIGNED NULL,
     status          ENUM('submitted','review','accepted','denied','progress','completed') NOT NULL DEFAULT 'submitted',
     decision_reason TEXT NULL,
