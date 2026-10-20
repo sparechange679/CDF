@@ -51,7 +51,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             </ol>
         </nav>
         <h1>Track Implementation</h1>
-        <p>Follow field updates, location and whether each uploaded project is complete or still in delivery.</p>
+        <p>Follow field updates, location and whether each approved project is complete or still in delivery.</p>
     </div>
 </section>
 
@@ -76,7 +76,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 
         <div class="row g-4">
             <div class="col-lg-7">
-                <div class="feedback-card" id="track-detail"></div>
+                <div class="feedback-card" id="track-detail">
+                    <p class="text-muted mb-0">Loading projects…</p>
+                </div>
             </div>
             <div class="col-lg-5">
                 <div class="feedback-card">
@@ -120,72 +122,115 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/app.js"></script>
 <script>
     (function () {
-        let select = document.getElementById("trackSelect");
-        let filter = document.getElementById("completeFilter");
+        "use strict";
+
+        var select = document.getElementById("trackSelect");
+        var filter = document.getElementById("completeFilter");
+        var projects = [];
+        var FALLBACK_IMG = "https://images.unsplash.com/photo-1581092919534-89d2a0c94f36?auto=format&fit=crop&w=800&q=80";
+        var wanted = new URLSearchParams(window.location.search).get("project");
+
+        function esc(s) {
+            var d = document.createElement("div");
+            d.textContent = s == null ? "" : String(s);
+            return d.innerHTML;
+        }
+
+        function money(n) {
+            var num = Number(n) || 0;
+            return num >= 1000000 ? "MK " + (num / 1000000).toFixed(1) + " Million" : "MK " + num.toLocaleString("en-GB");
+        }
+
+        function statusClass(s) {
+            return s === "accepted" ? "status-approved" : s === "progress" ? "status-progress" : "status-completed";
+        }
+
+        function barClass(p, done) {
+            if (done || p >= 100) return "bg-success";
+            if (p >= 50) return "bg-primary";
+            if (p >= 25) return "bg-warning";
+            return "bg-danger";
+        }
 
         function fillSelect() {
-            let mode = filter.value;
-            let items = CDF.citizenProjects().filter(function (p) {
+            var mode = filter.value;
+            var items = projects.filter(function (p) {
                 if (mode === "yes") return p.complete;
                 if (mode === "no") return !p.complete;
                 return true;
             });
-            let current = select.value;
+            var current = wanted || select.value;
             select.innerHTML = items.map(function (p) {
-                return '<option value="' + p.id + '">' + p.title + " — " + p.constituency + "</option>";
+                return '<option value="' + p.id + '">' + esc(p.title) + " — " + esc(p.constituency) + "</option>";
             }).join("");
-            if (items.some(function (p) { return p.id === current; })) select.value = current;
+            if (items.some(function (p) { return String(p.id) === String(current); })) select.value = current;
+            wanted = null;
             render();
         }
 
         function render() {
-            let p = CDF.findProject(select.value);
-            let box = document.getElementById("track-detail");
+            var p = projects.filter(function (x) { return String(x.id) === String(select.value); })[0];
+            var box = document.getElementById("track-detail");
             if (!p) {
                 box.innerHTML = '<p class="text-muted mb-0">No projects match this filter.</p>';
                 document.getElementById("snapshot").innerHTML = "";
                 return;
             }
-            let timeline = p.updates.map(function (u) {
-                return '<div class="timeline-item"><div class="small text-muted">' + u.date + '</div><div>' + u.text + "</div></div>";
-            }).join("");
+
+            var timeline = (p.updates || []).length
+                ? p.updates.map(function (u) {
+                    return '<div class="timeline-item"><div class="small text-muted">' + esc(u.date) + " · " + u.percentage + "%</div><div>" + esc(u.text) + "</div></div>";
+                }).join("")
+                : '<p class="text-muted small mb-0">No field updates have been posted yet.</p>';
+
             box.innerHTML =
-                '<h2 class="h5 fw-bold mb-1">' + p.title + "</h2>" +
-                '<p class="meta-info mb-3"><i class="bi bi-geo-alt-fill"></i> ' + p.constituency +
-                ' · <i class="bi bi-cash-stack"></i> ' + p.budget + "</p>" +
-                '<img src="' + p.image + '" class="rounded mb-3 w-100" style="height:220px;object-fit:cover;" alt="">' +
-                '<p>' + p.description + "</p>" +
+                '<h2 class="h5 fw-bold mb-1">' + esc(p.title) + "</h2>" +
+                '<p class="meta-info mb-3"><i class="bi bi-geo-alt-fill"></i> ' + esc(p.area) + " · " + esc(p.constituency) +
+                ' · <i class="bi bi-cash-stack"></i> ' + money(p.budget) + "</p>" +
+                '<img src="' + esc(p.image_url || FALLBACK_IMG) + '" class="rounded mb-3 w-100" style="height:220px;object-fit:cover;" alt="">' +
+                "<p>" + esc(p.description) + "</p>" +
                 '<div class="d-flex justify-content-between small mb-1"><span>Progress</span><span class="fw-semibold">' + p.progress + "%</span></div>" +
-                '<div class="progress mb-4"><div class="progress-bar ' + CDF.progressBarClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div>' +
+                '<div class="progress mb-4"><div class="progress-bar ' + barClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div>' +
                 '<h3 class="h6 fw-semibold">Field updates</h3>' +
                 '<div class="timeline">' + timeline + "</div>" +
                 '<a class="btn btn-outline-gov btn-sm mt-2" href="feedback.php?project=' + p.id + '">Give feedback</a>';
 
-            let all = CDF.citizenProjects();
-            let done = all.filter(function (x) { return x.complete; }).length;
+            var done = projects.filter(function (x) { return x.complete; }).length;
             document.getElementById("snapshot").innerHTML =
-                '<p class="mb-2"><span class="status-badge ' + CDF.statusClass(p.status) + '">' + p.statusLabel + "</span> " +
+                '<p class="mb-2"><span class="status-badge ' + statusClass(p.status) + '">' + esc(p.statusLabel) + "</span> " +
                 (p.complete
                     ? '<span class="status-badge status-completed ms-1">Complete</span>'
-                    : '<span class="status-badge status-progress ms-1">Not complete</span>') +
-                "</p>" +
-                '<p class="small text-muted mb-3">This record was uploaded by the constituency office' +
-                (p.status === "proposed" ? " and is awaiting full approval." : " and has been processed for delivery.") + "</p>" +
+                    : '<span class="status-badge status-progress ms-1">Not complete</span>') + "</p>" +
+                '<p class="small text-muted mb-3">Reference ' + esc(p.reference) + ". This project has been approved by the Member of Parliament" +
+                (p.complete ? " and the works are complete." : " and is being processed for delivery.") + "</p>" +
                 '<div class="row text-center">' +
-                    '<div class="col-4"><div class="fw-bold fs-4">' + all.length + '</div><div class="small text-muted">Uploaded</div></div>' +
-                    '<div class="col-4"><div class="fw-bold fs-4">' + (all.length - done) + '</div><div class="small text-muted">Ongoing</div></div>' +
-                    '<div class="col-4"><div class="fw-bold fs-4">' + done + '</div><div class="small text-muted">Complete</div></div>' +
-                "</div>" +
-                '<hr>' +
+                '<div class="col-4"><div class="fw-bold fs-4">' + projects.length + '</div><div class="small text-muted">Approved</div></div>' +
+                '<div class="col-4"><div class="fw-bold fs-4">' + (projects.length - done) + '</div><div class="small text-muted">Ongoing</div></div>' +
+                '<div class="col-4"><div class="fw-bold fs-4">' + done + '</div><div class="small text-muted">Complete</div></div>' +
+                "</div><hr>" +
                 '<a class="btn btn-cdf w-100" href="vote.php">Vote on open projects</a>';
+        }
+
+        function load() {
+            fetch("api/public_projects.php", { credentials: "same-origin", cache: "no-store" })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d.ok) throw new Error(d.error || "Failed");
+                    projects = d.projects;
+                    fillSelect();
+                })
+                .catch(function () {
+                    document.getElementById("track-detail").innerHTML =
+                        '<p class="text-danger mb-0">Could not load projects. Please refresh the page.</p>';
+                });
         }
 
         filter.addEventListener("change", fillSelect);
         select.addEventListener("change", render);
-        fillSelect();
+        load();
+        setInterval(load, 30000);   // pick up new progress updates
     })();
 </script>
 </body>

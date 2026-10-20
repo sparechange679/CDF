@@ -62,6 +62,15 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 <div class="feedback-card">
                     <h2 class="h5 fw-bold mb-3">Submit feedback</h2>
                     <div id="form-alert"></div>
+                    <?php if (!$me || $me['role'] !== 'citizen'): ?>
+                        <div class="alert alert-warning alert-gov py-2 small">
+                            <?php if ($me): ?>
+                                Only citizen accounts can submit feedback.
+                            <?php else: ?>
+                                <a href="login.php" class="alert-link">Sign in with your citizen account</a> to submit feedback.
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <form id="feedback-form">
                         <div class="mb-3">
                             <label class="form-label fw-medium" for="projectSelect">Select project</label>
@@ -70,12 +79,8 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-medium" for="citizenName">Your name</label>
-                            <input type="text" class="form-control" id="citizenName" placeholder="Optional" maxlength="80">
-                        </div>
-                        <div class="mb-3">
                             <label class="form-label fw-medium" for="message">Your feedback</label>
-                            <textarea class="form-control" id="message" rows="4" required placeholder="Describe what you observed, any issues, or suggestions..."></textarea>
+                            <textarea class="form-control" id="message" rows="4" required maxlength="2000" placeholder="Describe what you observed, any issues, or suggestions..."></textarea>
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-medium" for="rating">Overall rating</label>
@@ -107,7 +112,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 <div class="feedback-card">
                     <h2 class="h5 fw-bold mb-3">Citizen comments</h2>
                     <div id="comments">
-                        <p class="text-muted mb-0">No feedback yet for this project.</p>
+                        <p class="text-muted mb-0">Choose a project to see feedback.</p>
                     </div>
                 </div>
             </div>
@@ -117,15 +122,17 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
         <div class="table-responsive bg-white rounded-3 border" style="border-color:#eef0f2 !important;">
             <table class="table align-middle mb-0">
                 <thead class="table-light">
-                    <tr>
-                        <th>Project</th>
-                        <th>Constituency</th>
-                        <th>Progress</th>
-                        <th>Status</th>
-                        <th>Complete</th>
-                    </tr>
+                <tr>
+                    <th>Project</th>
+                    <th>Constituency</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                    <th>Complete</th>
+                </tr>
                 </thead>
-                <tbody id="status-table"></tbody>
+                <tbody id="status-table">
+                <tr><td colspan="5" class="text-center text-muted">Loading projects…</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
@@ -163,98 +170,193 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/app.js"></script>
 <script>
     (function () {
+        "use strict";
+
         var select = document.getElementById("projectSelect");
-        var scoped = CDF.citizenProjects();
-        scoped.forEach(function (p) {
-            var opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = p.title + " — " + p.constituency;
-            select.appendChild(opt);
-        });
+        var projects = [];
+        var currentUser = null;
 
-        var params = new URLSearchParams(window.location.search);
-        var initial = params.get("project");
-        if (initial && CDF.findProject(initial)) select.value = initial;
+        function esc(s) {
+            var d = document.createElement("div");
+            d.textContent = s == null ? "" : String(s);
+            return d.innerHTML;
+        }
 
-        function commentsFor(id) {
-            return CDF.getFeedback().filter(function (f) { return f.projectId === id; });
+        function statusClass(s) {
+            return s === "accepted" ? "status-approved" : s === "progress" ? "status-progress" : "status-completed";
+        }
+
+        function barClass(p, done) {
+            if (done || p >= 100) return "bg-success";
+            if (p >= 50) return "bg-primary";
+            if (p >= 25) return "bg-warning";
+            return "bg-danger";
+        }
+
+        function findProject(id) {
+            return projects.filter(function (p) { return String(p.id) === String(id); })[0];
+        }
+
+        function showAlert(type, msg) {
+            document.getElementById("form-alert").innerHTML =
+                '<div class="alert alert-' + type + ' alert-gov py-2"></div>';
+            document.getElementById("form-alert").firstChild.textContent = msg;
+        }
+
+        function csrf() {
+            return fetch("api/csrf.php", { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { return d.token; });
+        }
+
+        function renderComments(list) {
+            document.getElementById("comments").innerHTML = list.length
+                ? list.map(function (n) {
+                    return '<div class="comment-item">' +
+                        '<div class="d-flex justify-content-between small mb-1">' +
+                        "<strong>" + esc(n.name) + "</strong>" +
+                        '<span class="text-muted">Rating: ' + n.rating + "/5 · " + esc(n.date) + "</span>" +
+                        "</div>" +
+                        '<p class="mb-0 small">' + esc(n.comment) + "</p>" +
+                        "</div>";
+                }).join("")
+                : '<p class="text-muted mb-0">No feedback yet for this project.</p>';
+        }
+
+        function loadComments(id) {
+            document.getElementById("comments").innerHTML = '<p class="text-muted mb-0">Loading feedback…</p>';
+            fetch("api/feedback.php?project_id=" + encodeURIComponent(id), { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (select.value !== String(id)) return;
+                    renderComments(d.ok ? d.feedback : []);
+                })
+                .catch(function () {
+                    document.getElementById("comments").innerHTML =
+                        '<p class="text-danger mb-0">Could not load feedback.</p>';
+                });
         }
 
         function renderProgress(id) {
-            var p = CDF.findProject(id);
+            var p = findProject(id);
             var panel = document.getElementById("progress-detail");
             if (!p) {
                 panel.innerHTML = '<p class="text-muted mb-0">Choose a project from the list on the left.</p>';
-                document.getElementById("comments").innerHTML = '<p class="text-muted mb-0">No feedback yet for this project.</p>';
+                document.getElementById("comments").innerHTML = '<p class="text-muted mb-0">Choose a project to see feedback.</p>';
                 return;
             }
             var doneLabel = p.complete
                 ? '<span class="status-badge status-completed">Complete</span>'
                 : '<span class="status-badge status-progress">Not complete</span>';
+            var updates = (p.updates || []).length
+                ? '<h3 class="h6 fw-semibold mt-3">Field updates</h3><div class="timeline">' +
+                p.updates.map(function (u) {
+                    return '<div class="timeline-item"><div class="small text-muted">' + esc(u.date) +
+                        " · " + u.percentage + "%</div><div>" + esc(u.text) + "</div></div>";
+                }).join("") + "</div>"
+                : "";
+
             panel.innerHTML =
                 '<div class="d-flex justify-content-between align-items-start mb-2">' +
-                    '<div><h3 class="h5 mb-1">' + p.title + '</h3><p class="meta-info mb-0"><i class="bi bi-geo-alt-fill"></i> ' + p.constituency + '</p></div>' +
-                    doneLabel +
-                '</div>' +
-                '<p class="small text-muted">' + p.description + '</p>' +
-                '<div class="d-flex justify-content-between small mb-1"><span>Implementation progress</span><span class="fw-semibold">' + p.progress + '%</span></div>' +
-                '<div class="progress mb-3" style="height:10px"><div class="progress-bar ' + CDF.progressBarClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div>' +
-                '<p class="small mb-0"><strong>Official status:</strong> ' + p.statusLabel +
-                ' · <strong>Completion:</strong> ' + (p.complete ? "Yes — works handed over" : "No — still in delivery") + "</p>";
+                '<div><h3 class="h5 mb-1">' + esc(p.title) + '</h3><p class="meta-info mb-0"><i class="bi bi-geo-alt-fill"></i> ' +
+                esc(p.area) + " · " + esc(p.constituency) + "</p></div>" + doneLabel + "</div>" +
+                '<p class="small text-muted">' + esc(p.description) + "</p>" +
+                '<div class="d-flex justify-content-between small mb-1"><span>Implementation progress</span><span class="fw-semibold">' + p.progress + "%</span></div>" +
+                '<div class="progress mb-3" style="height:10px"><div class="progress-bar ' + barClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div>' +
+                '<p class="small mb-0"><strong>Official status:</strong> ' + esc(p.statusLabel) +
+                " · <strong>Completion:</strong> " + (p.complete ? "Yes — works handed over" : "No — still in delivery") + "</p>" +
+                updates;
 
-            var notes = commentsFor(id);
-            document.getElementById("comments").innerHTML = notes.length
-                ? notes.map(function (n) {
-                    return (
-                        '<div class="comment-item">' +
-                            '<div class="d-flex justify-content-between small mb-1">' +
-                                '<strong>' + (n.name || "Anonymous citizen") + '</strong>' +
-                                '<span class="text-muted">Rating: ' + n.rating + '/5 · ' + n.date + '</span>' +
-                            '</div>' +
-                            '<p class="mb-0 small">' + n.message + '</p>' +
-                        "</div>"
-                    );
-                }).join("")
-                : '<p class="text-muted mb-0">No feedback yet for this project.</p>';
+            loadComments(id);
         }
 
-        document.getElementById("status-table").innerHTML = scoped.map(function (p) {
-            return (
-                "<tr>" +
-                    '<td><a href="feedback.php?project=' + p.id + '">' + p.title + "</a></td>" +
-                    "<td>" + p.constituency + "</td>" +
-                    '<td style="min-width:140px"><div class="progress"><div class="progress-bar ' + CDF.progressBarClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div><span class="small">' + p.progress + "%</span></td>" +
-                    '<td><span class="status-badge ' + CDF.statusClass(p.status) + '">' + p.statusLabel + "</span></td>" +
-                    "<td>" + (p.complete ? "Yes" : "No") + "</td>" +
-                "</tr>"
-            );
-        }).join("");
+        function renderTable() {
+            document.getElementById("status-table").innerHTML = projects.length
+                ? projects.map(function (p) {
+                    return "<tr>" +
+                        '<td><a href="feedback.php?project=' + p.id + '">' + esc(p.title) + "</a></td>" +
+                        "<td>" + esc(p.constituency) + "</td>" +
+                        '<td style="min-width:140px"><div class="progress"><div class="progress-bar ' + barClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div><span class="small">' + p.progress + "%</span></td>" +
+                        '<td><span class="status-badge ' + statusClass(p.status) + '">' + esc(p.statusLabel) + "</span></td>" +
+                        "<td>" + (p.complete ? "Yes" : "No") + "</td>" +
+                        "</tr>";
+                }).join("")
+                : '<tr><td colspan="5" class="text-center text-muted">No approved projects yet.</td></tr>';
+        }
 
-        select.addEventListener("change", function () {
-            renderProgress(select.value);
-        });
+        select.addEventListener("change", function () { renderProgress(select.value); });
 
         document.getElementById("feedback-form").addEventListener("submit", function (e) {
             e.preventDefault();
             var id = select.value;
             if (!id) return;
-            CDF.addFeedback({
-                projectId: id,
-                name: document.getElementById("citizenName").value.trim(),
-                message: document.getElementById("message").value.trim(),
-                rating: document.getElementById("rating").value,
-                date: new Date().toLocaleString()
+
+            if (!currentUser || !currentUser.is_citizen) {
+                document.getElementById("form-alert").innerHTML =
+                    '<div class="alert alert-warning alert-gov py-2"><a href="login.php" class="alert-link">Sign in with your citizen account</a> to submit feedback.</div>';
+                return;
+            }
+
+            var btn = this.querySelector('button[type="submit"]');
+            var label = btn.innerHTML;
+            btn.disabled = true;
+            btn.textContent = "Sending…";
+
+            csrf().then(function (token) {
+                return fetch("api/feedback.php", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                    body: JSON.stringify({
+                        project_id: Number(id),
+                        rating: Number(document.getElementById("rating").value),
+                        comment: document.getElementById("message").value.trim()
+                    })
+                });
+            }).then(function (r) {
+                return r.json().catch(function () { return { ok: false, error: "Unexpected response from the server." }; });
+            }).catch(function () {
+                return { ok: false, error: "Could not reach the server. Check your connection." };
+            }).then(function (res) {
+                btn.disabled = false;
+                btn.innerHTML = label;
+                if (!res.ok) {
+                    showAlert("danger", res.error || "Could not submit feedback.");
+                    return;
+                }
+                document.getElementById("message").value = "";
+                document.getElementById("rating").value = "";
+                showAlert("success", res.message);
+                loadComments(id);
             });
-            document.getElementById("message").value = "";
-            document.getElementById("form-alert").innerHTML =
-                '<div class="alert alert-success alert-gov py-2">Thank you. Your feedback has been recorded for this project.</div>';
-            renderProgress(id);
         });
 
-        if (select.value) renderProgress(select.value);
+        fetch("api/public_projects.php", { credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.ok) throw new Error(d.error || "Failed");
+                projects = d.projects;
+                currentUser = d.user;
+                projects.forEach(function (p) {
+                    var opt = document.createElement("option");
+                    opt.value = p.id;
+                    opt.textContent = p.title + " — " + p.constituency;
+                    select.appendChild(opt);
+                });
+                renderTable();
+
+                var initial = new URLSearchParams(window.location.search).get("project");
+                if (initial && findProject(initial)) {
+                    select.value = String(findProject(initial).id);
+                    renderProgress(select.value);
+                }
+            })
+            .catch(function () {
+                document.getElementById("status-table").innerHTML =
+                    '<tr><td colspan="5" class="text-center text-danger">Could not load projects. Please refresh.</td></tr>';
+            });
     })();
 </script>
 </body>

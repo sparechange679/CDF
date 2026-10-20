@@ -51,7 +51,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             </ol>
         </nav>
         <h1>Approved CDF Projects</h1>
-        <p>Approved projects uploaded for your selected constituency. Log in to limit this list to your area.</p>
+        <p>Projects approved by the Member of Parliament. Sign in as a citizen to limit this list to your constituency.</p>
     </div>
 </section>
 
@@ -61,13 +61,13 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label fw-medium small mb-1">Search</label>
-                    <input type="search" id="search" class="form-control" placeholder="Project name or constituency">
+                    <input type="search" id="search" class="form-control" placeholder="Project name, area or constituency">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-medium small mb-1">Status</label>
                     <select id="statusFilter" class="form-select">
                         <option value="">All approved statuses</option>
-                        <option value="approved">Approved</option>
+                        <option value="accepted">Approved</option>
                         <option value="progress">In Progress</option>
                         <option value="completed">Completed</option>
                     </select>
@@ -84,7 +84,9 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
             </div>
         </div>
 
-        <div class="row g-4" id="project-grid"></div>
+        <div class="row g-4" id="project-grid">
+            <div class="col-12 text-center text-muted">Loading projects…</div>
+        </div>
         <p class="text-center text-muted mt-4 d-none" id="empty">No approved projects for this constituency yet.</p>
     </div>
 </section>
@@ -121,40 +123,101 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/app.js"></script>
 <script>
     (function () {
-        var list = CDF.approvedProjects();
-        var cats = [];
-        list.forEach(function (p) {
-            if (cats.indexOf(p.category) === -1) cats.push(p.category);
-        });
-        var catSel = document.getElementById("categoryFilter");
-        cats.forEach(function (c) {
-            catSel.insertAdjacentHTML("beforeend", '<option value="' + c + '">' + c + "</option>");
-        });
+        "use strict";
+
+        var list = [];
+        var FALLBACK_IMG = "https://images.unsplash.com/photo-1581092919534-89d2a0c94f36?auto=format&fit=crop&w=800&q=80";
+
+        function esc(s) {
+            var d = document.createElement("div");
+            d.textContent = s == null ? "" : String(s);
+            return d.innerHTML;
+        }
+
+        function money(n) {
+            var num = Number(n) || 0;
+            return num >= 1000000 ? "MK " + (num / 1000000).toFixed(1) + " Million" : "MK " + num.toLocaleString("en-GB");
+        }
+
+        function statusClass(s) {
+            return s === "accepted" ? "status-approved" : s === "progress" ? "status-progress" : "status-completed";
+        }
+
+        function barClass(p, done) {
+            if (done || p >= 100) return "bg-success";
+            if (p >= 50) return "bg-primary";
+            if (p >= 25) return "bg-warning";
+            return "bg-danger";
+        }
+
+        function card(p) {
+            var rating = p.avg_rating !== null
+                ? ' · <i class="bi bi-star-fill text-warning"></i> ' + p.avg_rating.toFixed(1) + " (" + p.feedback_count + ")"
+                : "";
+            return '<div class="col-md-6 col-lg-4">' +
+                '<div class="project-card">' +
+                '<img src="' + esc(p.image_url || FALLBACK_IMG) + '" alt="' + esc(p.title) + '">' +
+                '<div class="project-body">' +
+                '<div class="d-flex justify-content-between align-items-start mb-2 gap-2">' +
+                '<h5 class="mb-0 fw-semibold">' + esc(p.title) + '</h5>' +
+                '<span class="status-badge ' + statusClass(p.status) + '">' + esc(p.statusLabel) + '</span>' +
+                '</div>' +
+                '<p class="meta-info mb-3">' +
+                '<i class="bi bi-geo-alt-fill"></i> ' + esc(p.area) + ' · ' + esc(p.constituency) + '<br>' +
+                '<i class="bi bi-tag"></i> ' + esc(p.sector) + '<br>' +
+                '<i class="bi bi-cash-stack"></i> Budget: ' + money(p.budget) +
+                '</p>' +
+                '<p class="mb-2 small"><i class="bi bi-hand-thumbs-up-fill text-danger"></i> <span class="vote-count">' +
+                p.votes.toLocaleString() + '</span> citizen votes' + rating + '</p>' +
+                '<div class="d-flex justify-content-between small mb-1"><span>Progress</span><span class="fw-semibold">' + p.progress + '%</span></div>' +
+                '<div class="progress mb-3"><div class="progress-bar ' + barClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div>' +
+                '<div class="d-flex gap-2">' +
+                '<a class="btn btn-cdf btn-sm flex-fill" href="vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a>' +
+                '<a class="btn btn-outline-gov btn-sm flex-fill" href="feedback.php?project=' + p.id + '">Details &amp; feedback</a>' +
+                '</div>' +
+                '</div></div></div>';
+        }
 
         function render() {
             var q = document.getElementById("search").value.toLowerCase();
             var st = document.getElementById("statusFilter").value;
             var cat = document.getElementById("categoryFilter").value;
+
             var filtered = list.filter(function (p) {
-                var matchQ = !q || p.title.toLowerCase().indexOf(q) !== -1 || p.constituency.toLowerCase().indexOf(q) !== -1;
-                var matchS = !st || p.status === st;
-                var matchC = !cat || p.category === cat;
-                return matchQ && matchS && matchC;
+                var hay = (p.title + " " + p.area + " " + p.constituency).toLowerCase();
+                return (!q || hay.indexOf(q) !== -1) && (!st || p.status === st) && (!cat || p.sector === cat);
             });
-            document.getElementById("project-grid").innerHTML = filtered.map(function (p) {
-                return CDF.renderProjectCard(p, { detailsHref: "feedback.php?project=" + p.id });
-            }).join("");
+
+            document.getElementById("project-grid").innerHTML = filtered.map(card).join("");
             document.getElementById("resultCount").textContent = filtered.length + " project" + (filtered.length === 1 ? "" : "s");
             document.getElementById("empty").classList.toggle("d-none", filtered.length > 0);
         }
 
+        fetch("api/public_projects.php", { credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.ok) throw new Error(d.error || "Failed");
+                list = d.projects;
+                var sel = document.getElementById("categoryFilter");
+                var seen = {};
+                list.forEach(function (p) {
+                    if (!seen[p.sector]) {
+                        seen[p.sector] = true;
+                        sel.insertAdjacentHTML("beforeend", '<option value="' + esc(p.sector) + '">' + esc(p.sector) + "</option>");
+                    }
+                });
+                render();
+            })
+            .catch(function () {
+                document.getElementById("project-grid").innerHTML =
+                    '<div class="col-12 text-center text-danger">Could not load projects. Please refresh the page.</div>';
+            });
+
         document.getElementById("search").addEventListener("input", render);
         document.getElementById("statusFilter").addEventListener("change", render);
         document.getElementById("categoryFilter").addEventListener("change", render);
-        render();
     })();
 </script>
 </body>

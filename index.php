@@ -102,9 +102,11 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
     <div class="container">
         <div class="section-header text-center">
             <h2>Featured Approved Projects</h2>
-            <p>Uploaded projects that have passed official approval and are open for citizen monitoring</p>
+            <p>Projects that have passed official approval and are open for citizen monitoring</p>
         </div>
-        <div class="row g-4" id="featured-projects"></div>
+        <div class="row g-4" id="featured-projects">
+            <div class="col-12 text-center text-muted">Loading projects…</div>
+        </div>
         <div class="text-center mt-5">
             <a href="projects.php" class="btn btn-outline-gov">
                 View All Projects <i class="bi bi-arrow-right ms-1"></i>
@@ -124,7 +126,7 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
                 <div class="how-card">
                     <div class="how-number">1</div>
                     <h6 class="fw-semibold">Browse Projects</h6>
-                    <p class="small text-muted mb-0">View uploaded and approved CDF projects in your constituency.</p>
+                    <p class="small text-muted mb-0">View approved CDF projects in your constituency.</p>
                 </div>
             </div>
             <div class="col-md-3">
@@ -192,19 +194,75 @@ $tab = (($_GET['tab'] ?? '') === 'register') ? 'register' : 'login';
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/app.js"></script>
 <script>
     (function () {
-        let approved = CDF.approvedProjects();
-        document.getElementById("stat-active").textContent = approved.length;
-        document.getElementById("stat-votes").textContent = CDF.votesForProjects(approved).toLocaleString();
-        document.getElementById("stat-progress").textContent = approved.filter(function (p) { return p.status === "progress"; }).length;
-        document.getElementById("stat-done").textContent = approved.filter(function (p) { return p.complete; }).length;
-        document.getElementById("featured-projects").innerHTML = approved.length
-            ? approved.slice(0, 3).map(function (p) {
-                return CDF.renderProjectCard(p, { detailsHref: "feedback.php?project=" + p.id });
-            }).join("")
-            : '<div class="col-12 text-center text-muted">No approved developments in this constituency yet. <a href="login.php">Change constituency</a></div>';
+        "use strict";
+
+        var FALLBACK_IMG = "https://images.unsplash.com/photo-1581092919534-89d2a0c94f36?auto=format&fit=crop&w=800&q=80";
+
+        function esc(s) {
+            var d = document.createElement("div");
+            d.textContent = s == null ? "" : String(s);
+            return d.innerHTML;
+        }
+
+        function money(n) {
+            var num = Number(n) || 0;
+            return num >= 1000000 ? "MK " + (num / 1000000).toFixed(1) + " Million" : "MK " + num.toLocaleString("en-GB");
+        }
+
+        function statusClass(s) {
+            return s === "accepted" ? "status-approved" : s === "progress" ? "status-progress" : "status-completed";
+        }
+
+        function barClass(p, done) {
+            if (done || p >= 100) return "bg-success";
+            if (p >= 50) return "bg-primary";
+            if (p >= 25) return "bg-warning";
+            return "bg-danger";
+        }
+
+        function card(p) {
+            return '<div class="col-md-6 col-lg-4"><div class="project-card">' +
+                '<img src="' + esc(p.image_url || FALLBACK_IMG) + '" alt="' + esc(p.title) + '">' +
+                '<div class="project-body">' +
+                '<div class="d-flex justify-content-between align-items-start mb-2 gap-2">' +
+                '<h5 class="mb-0 fw-semibold">' + esc(p.title) + '</h5>' +
+                '<span class="status-badge ' + statusClass(p.status) + '">' + esc(p.statusLabel) + '</span></div>' +
+                '<p class="meta-info mb-3"><i class="bi bi-geo-alt-fill"></i> ' + esc(p.area) + ' · ' + esc(p.constituency) +
+                '<br><i class="bi bi-cash-stack"></i> Budget: ' + money(p.budget) + '</p>' +
+                '<p class="mb-2 small"><i class="bi bi-hand-thumbs-up-fill text-danger"></i> <span class="vote-count">' +
+                p.votes.toLocaleString() + '</span> citizen votes</p>' +
+                '<div class="d-flex justify-content-between small mb-1"><span>Progress</span><span class="fw-semibold">' + p.progress + '%</span></div>' +
+                '<div class="progress mb-3"><div class="progress-bar ' + barClass(p.progress, p.complete) + '" style="width:' + p.progress + '%"></div></div>' +
+                '<div class="d-flex gap-2">' +
+                '<a class="btn btn-cdf btn-sm flex-fill" href="vote.php"><i class="bi bi-hand-thumbs-up me-1"></i> Vote</a>' +
+                '<a class="btn btn-outline-gov btn-sm flex-fill" href="feedback.php?project=' + p.id + '">Details</a>' +
+                '</div></div></div></div>';
+        }
+
+        function load() {
+            fetch("api/public_projects.php", { credentials: "same-origin", cache: "no-store" })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d.ok) throw new Error(d.error || "Failed");
+                    var list = d.projects;
+                    document.getElementById("stat-active").textContent = list.length;
+                    document.getElementById("stat-votes").textContent = list.reduce(function (s, p) { return s + p.votes; }, 0).toLocaleString();
+                    document.getElementById("stat-progress").textContent = list.filter(function (p) { return p.status === "progress"; }).length;
+                    document.getElementById("stat-done").textContent = list.filter(function (p) { return p.complete; }).length;
+                    document.getElementById("featured-projects").innerHTML = list.length
+                        ? list.slice(0, 3).map(card).join("")
+                        : '<div class="col-12 text-center text-muted">No approved developments in this constituency yet. <a href="login.php">Change constituency</a></div>';
+                })
+                .catch(function () {
+                    document.getElementById("featured-projects").innerHTML =
+                        '<div class="col-12 text-center text-danger">Could not load projects. Please refresh the page.</div>';
+                });
+        }
+
+        load();
+        setInterval(load, 30000);   // keep the numbers fresh
     })();
 </script>
 </body>
