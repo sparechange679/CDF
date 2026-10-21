@@ -34,7 +34,6 @@ $me = require_role('mp', '../auth.php');
                     <li><a class="nav-link active" href="index.php">Overview</a></li>
                     <li><a class="nav-link" href="projects.php">All proposals</a></li>
                     <li><a class="nav-link" href="decisions.php">Decisions</a></li>
-                    <li><a class="nav-link" href="allocations.php">Funds &amp; DDO</a></li>
                     <li><a class="nav-link" href="progress.php">Progress</a></li>
                     <li><a class="nav-link" href="reports.php">Reports</a></li>
                 </ul>

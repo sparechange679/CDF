@@ -17,7 +17,7 @@ $to = $isCli ? ($argv[1] ?? '') : (string) ($_GET['to'] ?? '');
 header('Content-Type: text/plain; charset=utf-8');
 
 if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
-    exit("Give an address: ?to=you@example.com\n");
+    exit("Give an address: ?to=chisisibongile@gmail.com\n");
 }
 
 echo 'Host: ' . MAIL_HOST . ':' . MAIL_PORT . ' (' . (MAIL_ENCRYPTION ?: 'no encryption') . ")\n";

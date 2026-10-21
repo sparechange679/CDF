@@ -1,2 +1,3 @@
 /config/stripe.php
 /vendor
+/send_test_mail.php

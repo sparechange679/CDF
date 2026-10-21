@@ -71,7 +71,9 @@ function stripe_finalize_session(PDO $pdo, string $sessionId): array
         return ['ok' => true, 'already' => true, 'project_id' => (int) $pay['project_id']];
     }
 
-    $r = stripe_request('GET', '/checkout/sessions/' . rawurlencode($sessionId));
+    $r = stripe_request('GET', '/checkout/sessions/' . rawurlencode($sessionId), [
+        'expand' => ['payment_intent.latest_charge'],
+    ]);
     if (!$r['ok']) {
         return ['ok' => false, 'error' => $r['error']];
     }
@@ -87,23 +89,30 @@ function stripe_finalize_session(PDO $pdo, string $sessionId): array
         return ['ok' => false, 'error' => 'Payment does not match this project.'];
     }
 
+    $pi         = $s['payment_intent'] ?? null;
+    $piId       = is_array($pi) ? (string) ($pi['id'] ?? '') : (string) $pi;
+    $receiptUrl = (is_array($pi) && is_array($pi['latest_charge'] ?? null))
+        ? (string) ($pi['latest_charge']['receipt_url'] ?? '') : '';
+
     $projectId = (int) $pay['project_id'];
     try {
         $pdo->beginTransaction();
 
-        $pdo->prepare("UPDATE payments SET status = 'paid', paid_at = NOW(), stripe_payment_intent = ? WHERE id = ?")
-            ->execute([(string) ($s['payment_intent'] ?? ''), $pay['id']]);
+        // Only the first request to get here flips the row; it alone sends the emails.
+        $upd = $pdo->prepare("UPDATE payments SET status = 'paid', paid_at = NOW(), stripe_payment_intent = ? WHERE id = ? AND status <> 'paid'");
+        $upd->execute([$piId, $pay['id']]);
+        if ($upd->rowCount() !== 1) {
+            $pdo->rollBack();
+            return ['ok' => true, 'already' => true, 'project_id' => $projectId];
+        }
 
         $has = $pdo->prepare('SELECT id FROM allocations WHERE project_id = ?');
         $has->execute([$projectId]);
         if (!$has->fetch()) {
-            $info = $pdo->prepare(
-                'SELECT p.title, q.breakdown FROM projects p
-                   LEFT JOIN quotations q ON q.project_id = p.id WHERE p.id = ?'
-            );
+            $info = $pdo->prepare('SELECT title FROM projects WHERE id = ?');
             $info->execute([$projectId]);
-            $row   = $info->fetch() ?: ['title' => '', 'breakdown' => ''];
-            $scope = mb_substr('Contract price paid via Stripe for: ' . $row['title'], 0, 255);
+            $title = (string) $info->fetchColumn();
+            $scope = mb_substr('Contract price paid via Stripe for: ' . $title, 0, 255);
             $ref   = sprintf('ALLOC-%s-%04d-%s', date('Y'), $projectId, strtoupper(bin2hex(random_bytes(2))));
 
             $pdo->prepare(
@@ -120,38 +129,86 @@ function stripe_finalize_session(PDO $pdo, string $sessionId): array
         return ['ok' => false, 'error' => 'Payment was received but could not be recorded. Contact support.'];
     }
 
-    stripe_notify_paid($pdo, $projectId, (float) $pay['amount_mk']);
+    stripe_send_emails($pdo, $pay, $piId, $receiptUrl);
     return ['ok' => true, 'project_id' => $projectId];
 }
 
-/** Tells the contractor the funds have been allocated. Never throws. */
-function stripe_notify_paid(PDO $pdo, int $projectId, float $amountMk): void
+/** Receipt to the DDO who paid, "funds allocated" to the contractor. Never throws. */
+function stripe_send_emails(PDO $pdo, array $pay, string $piId, string $receiptUrl): void
 {
     try {
+        $projectId = (int) $pay['project_id'];
         $st = $pdo->prepare(
-            'SELECT p.title, p.reference_no, u.id AS uid, u.full_name, u.email
-               FROM quotations q
-               JOIN projects p ON p.id = q.project_id
-               JOIN users u ON u.id = q.contractor_id
-              WHERE q.project_id = ?'
+            'SELECT p.title, p.reference_no,
+                    cu.id AS c_id, cu.full_name AS c_name, cu.email AS c_email, kp.company_name,
+                    a.reference AS alloc_ref
+               FROM projects p
+          LEFT JOIN quotations q ON q.project_id = p.id
+          LEFT JOIN users cu ON cu.id = q.contractor_id
+          LEFT JOIN contractor_profiles kp ON kp.user_id = cu.id
+          LEFT JOIN allocations a ON a.project_id = p.id
+              WHERE p.id = ?'
         );
         $st->execute([$projectId]);
         $r = $st->fetch();
         if (!$r) {
             return;
         }
-        $amount = 'MK ' . number_format($amountMk, 2);
-        $link   = APP_URL . '/contractor/project.php?id=' . $projectId;
-        $text   = "Hello {$r['full_name']},\n\nFunds of {$amount} have been allocated for {$r['title']} ({$r['reference_no']}).\nYou can now start work.\n\n{$link}\n";
-        $html   = email_layout(
-            'Funds allocated',
-            '<p style="margin:0 0 4px">Hello ' . mail_esc($r['full_name']) . ',</p>'
-            . '<p style="margin:0">Funds have been allocated for your project. You can now start work.</p>'
-            . email_details(['Project' => $r['title'], 'Reference' => $r['reference_no'], 'Amount' => $amount])
-            . email_button($link, 'Open project')
-        );
-        send_notification((int) $r['uid'], (string) $r['email'], 'funds_allocated', 'Funds allocated: ' . $r['title'], $text, $html);
+
+        $payer = $pdo->prepare('SELECT id, full_name, email FROM users WHERE id = ?');
+        $payer->execute([(int) $pay['user_id']]);
+        $ddo = $payer->fetch();
+
+        $amountMk   = 'MK ' . number_format((float) $pay['amount_mk'], 2);
+        $charged    = strtoupper($pay['currency']) . ' ' . number_format((float) $pay['charge_amount'], 2);
+        $receiptNo  = sprintf('RCT-%s-%05d', date('Y'), (int) $pay['id']);
+        $paidOn     = date('d M Y, H:i');
+        $contractor = $r['company_name'] ?: $r['c_name'];
+
+        /* ---- Receipt to the DDO ---- */
+        if ($ddo) {
+            $rows = [
+                'Receipt no.'        => $receiptNo,
+                'Date paid'          => $paidOn,
+                'Project'            => $r['title'],
+                'Project reference'  => $r['reference_no'],
+                'Paid to (contractor)' => $contractor,
+                'Contract amount'    => $amountMk,
+                'Amount charged'     => $charged,
+                'Fund allocation ref' => $r['alloc_ref'] ?? '',
+                'Stripe payment ID'  => $piId,
+            ];
+            $text = "Hello {$ddo['full_name']},\n\nYour payment was received. Receipt {$receiptNo}\n\n";
+            foreach ($rows as $k => $v) {
+                if ($v !== '') { $text .= "$k: $v\n"; }
+            }
+            if ($receiptUrl !== '') { $text .= "\nCard receipt from Stripe:\n$receiptUrl\n"; }
+
+            $html = email_layout(
+                'Payment receipt',
+                '<p style="margin:0 0 4px">Hello ' . mail_esc($ddo['full_name']) . ',</p>'
+                . '<p style="margin:0">Your payment was received and the funds have been allocated to the project.</p>'
+                . email_details($rows)
+                . ($receiptUrl !== '' ? email_button($receiptUrl, 'View Stripe card receipt') : '')
+                . email_button(APP_URL . '/ddo/quotation.php?project=' . $projectId, 'Open project quotation')
+            );
+            send_notification((int) $ddo['id'], (string) $ddo['email'], 'payment_receipt', 'Payment receipt ' . $receiptNo . ': ' . $r['title'], $text, $html);
+        }
+
+        /* ---- Funds allocated notice to the contractor ---- */
+        if (!empty($r['c_email'])) {
+            $link = APP_URL . '/contractor/project.php?id=' . $projectId;
+            $text = "Hello {$r['c_name']},\n\nFunds of {$amountMk} have been allocated for {$r['title']} ({$r['reference_no']}).\nYou can now start work.\n\n{$link}\n";
+            $html = email_layout(
+                'Funds allocated',
+                '<p style="margin:0 0 4px">Hello ' . mail_esc($r['c_name']) . ',</p>'
+                . '<p style="margin:0">Funds have been allocated for your project. You can now start work.</p>'
+                . email_details(['Project' => $r['title'], 'Reference' => $r['reference_no'], 'Amount' => $amountMk])
+                . email_button($link, 'Open project')
+            );
+            send_notification((int) $r['c_id'], (string) $r['c_email'], 'funds_allocated', 'Funds allocated: ' . $r['title'], $text, $html);
+        }
     } catch (Throwable $e) {
-        error_log('stripe_notify_paid failed: ' . $e->getMessage());
+        error_log('stripe_send_emails failed: ' . $e->getMessage());
     }
 }

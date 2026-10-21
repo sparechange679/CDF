@@ -10,7 +10,7 @@ $projectId = (int) ($_GET['project'] ?? 0);
     <div class="container">
         <div class="ddo-eyebrow">Procurement</div>
         <h1 class="h2">Contractor quotation</h1>
-        <p class="mb-0">Request a price from the contractor you assigned, review what they send back, then accept or reject it.</p>
+        <p class="mb-0">Request a price from the contractor you assigned, review what they send back, accept or reject it, then pay the accepted amount.</p>
     </div>
 </header>
 
@@ -54,7 +54,6 @@ $projectId = (int) ($_GET['project'] ?? 0);
         }
 
         function steps(status) {
-            var order = ['requested', 'submitted', 'decided'];
             var at = !q ? 0 : (status === 'requested' ? 1 : (status === 'submitted' ? 2 : 3));
             var labels = ['Contractor assigned', 'Quotation requested', 'Quotation received', 'Decision'];
             return '<div class="d-flex flex-wrap gap-2 mb-4">' + labels.map(function (l, i) {
@@ -105,7 +104,8 @@ $projectId = (int) ($_GET['project'] ?? 0);
                     (diff > 0 ? mk(diff) + ' over' : mk(-diff) + ' under') + '</div></div></div>' +
                     (q.breakdown ? '<div class="small text-muted">Breakdown</div><p style="white-space:pre-line">' + esc(q.breakdown) + '</p>' : '') +
                     (status === 'accepted'
-                        ? '<div class="ddo-callout small">Accepted on ' + esc(q.decided_at) + (q.decision_note ? ' · ' + esc(q.decision_note) : '') + '</div>'
+                        ? '<div class="ddo-callout small">Accepted on ' + esc(q.decided_at) + (q.decision_note ? ' · ' + esc(q.decision_note) : '') + '</div>' +
+                        '<div id="payBox" class="mt-3"><div class="text-muted small">Loading payment details…</div></div>'
                         : '<hr><form id="decForm"><label class="form-label small fw-bold" for="dnote">Note to contractor (required if rejecting)</label>' +
                         '<textarea id="dnote" class="form-control mb-3" rows="2" maxlength="2000"></textarea>' +
                         '<div class="d-flex gap-2"><button type="button" class="btn btn-cdf" data-d="accepted"><i class="bi bi-check2-circle me-1"></i>Accept quotation</button>' +
@@ -138,9 +138,76 @@ $projectId = (int) ($_GET['project'] ?? 0);
                 var b = e.target.closest('button[data-d]'); if (!b) return;
                 post({ action: 'decide', decision: b.dataset.d, note: document.getElementById('dnote').value }).then(function (r) {
                     if (!r.ok) return alertBox('danger', r.error);
-                    alertBox('success', r.message); load();
+                    alertBox('success', b.dataset.d === 'accepted'
+                        ? 'Quotation accepted. You can now pay the quoted amount below.'
+                        : r.message);
+                    load();
                 });
             });
+
+            if (status === 'accepted') loadPayment();
+        }
+
+        /* ---------------- Payment (Stripe) ---------------- */
+        function loadPayment() {
+            fetch('../api/payments.php?project_id=' + PID, { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var box = document.getElementById('payBox');
+                    if (!box) return;
+                    if (!d.ok) {
+                        box.innerHTML = '<div class="alert alert-danger mb-0">' + esc(d.error) + '</div>';
+                        return;
+                    }
+                    if (d.payment) {
+                        box.innerHTML = '<div class="alert alert-success mb-0"><i class="bi bi-check-circle-fill me-2"></i>' +
+                            '<strong>Paid.</strong> ' + mk(d.payment.amount_mk) + ' (' + esc(d.payment.currency) + ' ' +
+                            Number(d.payment.charge_amount).toFixed(2) + ') was paid' +
+                            (d.allocation ? ' and allocated under <strong>' + esc(d.allocation.reference) + '</strong>' : '') +
+                            '. A receipt was emailed to you.</div>';
+                        return;
+                    }
+                    if (d.preview) {
+                        box.innerHTML = '<div class="border rounded p-3 bg-light">' +
+                            '<div class="small text-muted">Amount to pay</div>' +
+                            '<div class="fs-4 fw-bold">' + mk(d.preview.amount_mk) + '</div>' +
+                            '<div class="small text-muted mb-3">Charged as ' + esc(d.preview.currency) + ' ' +
+                            Number(d.preview.charge_amount).toFixed(2) + ' via Stripe. This becomes the fund allocation for the project.</div>' +
+                            '<button id="payBtn" type="button" class="btn btn-cdf"><i class="bi bi-credit-card me-2"></i>Pay now</button></div>';
+                        document.getElementById('payBtn').addEventListener('click', startPayment);
+                    } else {
+                        box.innerHTML = '';
+                    }
+                })
+                .catch(function () {
+                    var box = document.getElementById('payBox');
+                    if (box) box.innerHTML = '<div class="alert alert-danger mb-0">Could not load payment details.</div>';
+                });
+        }
+
+        function startPayment() {
+            var btn = document.getElementById('payBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirecting to Stripe…';
+            fetch('../api/csrf.php', { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (t) {
+                    return fetch('../api/payments.php', {
+                        method: 'POST', credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': t.token },
+                        body: JSON.stringify({ action: 'checkout', project_id: PID })
+                    });
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (r) {
+                    if (!r.ok) throw new Error(r.error || 'Could not start payment.');
+                    window.location.href = r.url;
+                })
+                .catch(function (e) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-credit-card me-2"></i>Pay now';
+                    alertBox('danger', e.message);
+                });
         }
 
         function load() {
@@ -153,6 +220,20 @@ $projectId = (int) ($_GET['project'] ?? 0);
                 })
                 .catch(function () { document.getElementById('content').innerHTML = '<div class="ddo-panel ddo-empty">Could not reach the server.</div>'; });
         }
+
+        // Message when Stripe sends the DDO back to this page
+        var qs = new URLSearchParams(location.search);
+        if (qs.get('paid')) {
+            alertBox('success', 'Payment received. Funds have been allocated and a receipt was emailed to you.');
+        } else if (qs.get('payment') === 'cancelled') {
+            alertBox('warning', 'Payment was cancelled. No money was taken.');
+        } else if (qs.get('payment') === 'failed') {
+            alertBox('danger', 'We could not confirm the payment. If you were charged, refresh this page in a minute.');
+        }
+        if (qs.get('paid') || qs.get('payment')) {
+            history.replaceState(null, '', 'quotation.php?project=' + PID);
+        }
+
         load();
     })();
 </script>
