@@ -46,6 +46,7 @@ $me = require_role('contractor');
                 <li><a class='nav-link' href='index.php'>Overview</a></li>
                 <li><a class='nav-link' href='projects.php'>Assigned projects</a></li>
                 <li><a class='nav-link active' href='reports.php'>Reports &amp; results</a></li>
+                <li><a class='nav-link' href='quotations.php'>Quotations</a></li>
             </ul>
         </div>
     </div>

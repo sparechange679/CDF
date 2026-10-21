@@ -257,3 +257,81 @@ function notify_contractor_assigned(PDO $pdo, int $projectId, int $contractorId,
         error_log('notify_contractor_assigned failed: ' . $e->getMessage());
     }
 }
+
+// ---- APPEND THIS TO THE END OF includes/notifications.php ----
+
+/**
+ * Quotation emails.
+ * $event: requested (-> contractor) | submitted (-> DDO who asked) | accepted / rejected (-> contractor)
+ */
+function notify_quotation_event(PDO $pdo, int $projectId, string $event): void
+{
+    try {
+        $st = $pdo->prepare(
+            'SELECT q.*, p.title, p.reference_no, p.budget,
+                    cu.id AS c_id, cu.full_name AS c_name, cu.email AS c_email,
+                    du.id AS d_id, du.full_name AS d_name, du.email AS d_email
+               FROM quotations q
+               JOIN projects p ON p.id = q.project_id
+               JOIN users cu ON cu.id = q.contractor_id
+          LEFT JOIN users du ON du.id = q.requested_by
+              WHERE q.project_id = ?'
+        );
+        $st->execute([$projectId]);
+        $q = $st->fetch();
+        if (!$q) {
+            return;
+        }
+
+        $toDdo = ($event === 'submitted');
+        $uid   = (int) ($toDdo ? $q['d_id'] : $q['c_id']);
+        $email = (string) ($toDdo ? $q['d_email'] : $q['c_email']);
+        $name  = (string) ($toDdo ? $q['d_name'] : $q['c_name']);
+        if ($email === '') {
+            return;
+        }
+
+        $link = $toDdo
+            ? APP_URL . '/ddo/quotation.php?project=' . $projectId
+            : APP_URL . '/contractor/quotation.php';
+        $price = $q['amount'] !== null ? 'MK ' . number_format((float) $q['amount'], 2) : '';
+
+        $copy = [
+            'requested' => ['Quotation requested: ',  'Quotation requested',  'The District Development Officer has asked you for a quotation for this project. Please send your price and the time you need.'],
+            'submitted' => ['Quotation received: ',   'Quotation received',   $q['c_name'] . ' has sent a quotation for this project.'],
+            'accepted'  => ['Quotation accepted: ',   'Quotation accepted',   'Your quotation has been accepted.'],
+            'rejected'  => ['Quotation rejected: ',   'Quotation rejected',   'Your quotation was not accepted. Check the note below and send a new one if asked.'],
+        ][$event] ?? null;
+        if (!$copy) {
+            return;
+        }
+
+        $rows = [
+            'Project'      => $q['title'],
+            'Reference'    => $q['reference_no'],
+            'Budget'       => 'MK ' . number_format((float) $q['budget'], 2),
+            'Price quoted' => $price,
+            'Duration'     => $q['duration_days'] ? $q['duration_days'] . ' days' : '',
+            'Reply by'     => $event === 'requested' ? (string) $q['due_date'] : '',
+            'Note'         => $event === 'requested' ? (string) $q['request_note'] : (string) $q['decision_note'],
+        ];
+
+        $text = "Hello {$name},\n\n{$copy[2]}\n\n";
+        foreach ($rows as $label => $value) {
+            if ($value !== null && $value !== '') {
+                $text .= $label . ': ' . $value . "\n";
+            }
+        }
+        $text .= "\nOpen it here:\n{$link}\n";
+
+        $html = email_layout(
+            $copy[1],
+            '<p style="margin:0 0 4px">Hello ' . mail_esc($name) . ',</p><p style="margin:0">' . mail_esc($copy[2]) . '</p>'
+            . email_details($rows) . email_button($link, 'Open quotation')
+        );
+
+        send_notification($uid, $email, 'quotation_' . $event, $copy[0] . $q['title'], $text, $html);
+    } catch (Throwable $e) {
+        error_log('notify_quotation_event failed: ' . $e->getMessage());
+    }
+}
