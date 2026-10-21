@@ -21,6 +21,7 @@
 use JetBrains\PhpStorm\NoReturn;
 
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 $pdo = db();
 
@@ -28,12 +29,12 @@ function status_label(string $status): string
 {
     return match ($status) {
         'submitted' => 'Submitted',
-        'review'    => 'Under review',
-        'accepted'  => 'Accepted',
-        'denied'    => 'Denied',
-        'progress'  => 'Implementation',
+        'review' => 'Under review',
+        'accepted' => 'Accepted',
+        'denied' => 'Denied',
+        'progress' => 'Implementation',
         'completed' => 'Completed',
-        default     => ucfirst($status),
+        default => ucfirst($status),
     };
 }
 
@@ -46,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         json_out(['ok' => false, 'error' => 'Sign in to view projects.'], 401);
     }
 
-    $singleId = isset($_GET['id']) && is_numeric($_GET['id']) ? (int) $_GET['id'] : null;
+    $singleId = isset($_GET['id']) && is_numeric($_GET['id']) ? (int)$_GET['id'] : null;
 
     if ($singleId !== null) {
         // Fetch single project
@@ -93,19 +94,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         // Authorization check
-        if ($me['role'] === 'council' && (int) ($project['submitted_by'] ?? 0) !== (int) $me['id']) {
+        if ($me['role'] === 'council' && (int)($project['submitted_by'] ?? 0) !== (int)$me['id']) {
             // Check if submitted by this council user
             $subCheck = $pdo->prepare('SELECT submitted_by FROM projects WHERE id = ?');
             $subCheck->execute([$singleId]);
             $subRow = $subCheck->fetch();
-            if (!$subRow || (int) $subRow['submitted_by'] !== (int) $me['id']) {
+            if (!$subRow || (int)$subRow['submitted_by'] !== (int)$me['id']) {
                 json_out(['ok' => false, 'error' => 'Access denied.'], 403);
             }
         } elseif ($me['role'] === 'mp') {
             $mpStmt = $pdo->prepare('SELECT constituency_id FROM mp_profiles WHERE user_id = ?');
-            $mpStmt->execute([(int) $me['id']]);
+            $mpStmt->execute([(int)$me['id']]);
             $mpProfile = $mpStmt->fetch();
-            if (!$mpProfile || (int) $mpProfile['constituency_id'] !== (int) $project['constituency_id']) {
+            if (!$mpProfile || (int)$mpProfile['constituency_id'] !== (int)$project['constituency_id']) {
                 json_out(['ok' => false, 'error' => 'This project is outside your parliamentary constituency.'], 403);
             }
         }
@@ -173,37 +174,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                   WHERE pu.assignment_id = ?
                ORDER BY pu.update_date DESC, pu.id DESC"
             );
-            $updStmt->execute([(int) $assignment['id']]);
+            $updStmt->execute([(int)$assignment['id']]);
             $updates = $updStmt->fetchAll();
             foreach ($updates as &$u) {
-                $u['id'] = (int) $u['id'];
-                $u['percentage'] = (int) $u['percentage'];
+                $u['id'] = (int)$u['id'];
+                $u['percentage'] = (int)$u['percentage'];
             }
             unset($u);
         }
 
-        $project['id']            = (int) $project['id'];
-        $project['budget']        = (float) $project['budget'];
-        $project['beneficiaries'] = $project['beneficiaries'] !== null ? (int) $project['beneficiaries'] : null;
-        $project['votes']         = (int) $project['votes'];
-        $project['voting_open']   = (int) ($project['voting_open'] ?? 1);
-        $project['progress']      = (int) ($project['progress'] ?? 0);
-        $project['statusLabel']   = status_label((string) $project['status']);
+        $project['id'] = (int)$project['id'];
+        $project['budget'] = (float)$project['budget'];
+        $project['beneficiaries'] = $project['beneficiaries'] !== null ? (int)$project['beneficiaries'] : null;
+        $project['votes'] = (int)$project['votes'];
+        $project['voting_open'] = (int)($project['voting_open'] ?? 1);
+        $project['progress'] = (int)($project['progress'] ?? 0);
+        $project['statusLabel'] = status_label((string)$project['status']);
 
         if (!empty($project['alloc_amount'])) {
             $project['allocation'] = [
-                'amount'    => (float) $project['alloc_amount'],
-                'source'    => $project['alloc_source'] ?? '',
-                'ddo'       => $project['alloc_ddo'] ?? 'District Development Officer',
+                'amount' => (float)$project['alloc_amount'],
+                'source' => $project['alloc_source'] ?? '',
+                'ddo' => $project['alloc_ddo'] ?? 'District Development Officer',
                 'reference' => $project['alloc_reference'] ?? '',
-                'date'      => $project['alloc_date'] ?? '',
-                'scope'     => $project['alloc_scope'] ?? '',
+                'date' => $project['alloc_date'] ?? '',
+                'scope' => $project['alloc_scope'] ?? '',
             ];
         } else {
             $project['allocation'] = null;
         }
 
-        $project['assignment']       = $assignment;
+        $project['assignment'] = $assignment;
         $project['progress_updates'] = $updates;
 
         json_out(['ok' => true, 'project' => $project, 'comments' => $comments, 'assignment' => $assignment, 'progress_updates' => $updates]);
@@ -217,14 +218,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                JOIN constituencies c ON c.id = mp.constituency_id
               WHERE mp.user_id = ?'
         );
-        $mpStmt->execute([(int) $me['id']]);
+        $mpStmt->execute([(int)$me['id']]);
         $mpProfile = $mpStmt->fetch();
 
         if (!$mpProfile) {
             json_out(['ok' => false, 'error' => 'No constituency assigned to your MP account.'], 403);
         }
 
-        $constituencyId = (int) $mpProfile['constituency_id'];
+        $constituencyId = (int)$mpProfile['constituency_id'];
 
         $stmt = $pdo->prepare(
             "SELECT p.id,
@@ -266,22 +267,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $projects = $stmt->fetchAll();
 
         foreach ($projects as &$p) {
-            $p['id']            = (int) $p['id'];
-            $p['budget']        = (float) $p['budget'];
-            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int) $p['beneficiaries'] : null;
-            $p['votes']         = (int) $p['votes'];
-            $p['voting_open']   = (int) ($p['voting_open'] ?? 1);
-            $p['progress']      = (int) ($p['progress'] ?? 0);
-            $p['statusLabel']   = status_label((string) $p['status']);
+            $p['id'] = (int)$p['id'];
+            $p['budget'] = (float)$p['budget'];
+            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int)$p['beneficiaries'] : null;
+            $p['votes'] = (int)$p['votes'];
+            $p['voting_open'] = (int)($p['voting_open'] ?? 1);
+            $p['progress'] = (int)($p['progress'] ?? 0);
+            $p['statusLabel'] = status_label((string)$p['status']);
 
             if (!empty($p['alloc_amount'])) {
                 $p['allocation'] = [
-                    'amount'    => (float) $p['alloc_amount'],
-                    'source'    => $p['alloc_source'] ?? '',
-                    'ddo'       => $p['alloc_ddo'] ?? 'District Development Officer',
+                    'amount' => (float)$p['alloc_amount'],
+                    'source' => $p['alloc_source'] ?? '',
+                    'ddo' => $p['alloc_ddo'] ?? 'District Development Officer',
                     'reference' => $p['alloc_reference'] ?? '',
-                    'date'      => $p['alloc_date'] ?? '',
-                    'scope'     => $p['alloc_scope'] ?? '',
+                    'date' => $p['alloc_date'] ?? '',
+                    'scope' => $p['alloc_scope'] ?? '',
                 ];
             } else {
                 $p['allocation'] = null;
@@ -290,14 +291,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         unset($p);
 
         json_out([
-            'ok'           => true,
+            'ok' => true,
             'constituency' => [
-                'id'       => $constituencyId,
-                'name'     => $mpProfile['constituency_name'],
+                'id' => $constituencyId,
+                'name' => $mpProfile['constituency_name'],
                 'district' => $mpProfile['district'],
-                'office'   => $mpProfile['parliamentary_office'],
+                'office' => $mpProfile['parliamentary_office'],
             ],
-            'projects'     => $projects,
+            'projects' => $projects,
         ]);
     }
 
@@ -329,17 +330,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
               WHERE p.submitted_by = ? OR p.submitted_by IS NULL
            ORDER BY p.created_at DESC"
         );
-        $stmt->execute([(int) $me['id']]);
+        $stmt->execute([(int)$me['id']]);
         $projects = $stmt->fetchAll();
 
         foreach ($projects as &$p) {
-            $p['id']            = (int) $p['id'];
-            $p['budget']        = (float) $p['budget'];
-            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int) $p['beneficiaries'] : null;
-            $p['votes']         = (int) $p['votes'];
-            $p['voting_open']   = (int) ($p['voting_open'] ?? 1);
-            $p['progress']      = (int) ($p['progress'] ?? 0);
-            $p['statusLabel']   = status_label((string) $p['status']);
+            $p['id'] = (int)$p['id'];
+            $p['budget'] = (float)$p['budget'];
+            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int)$p['beneficiaries'] : null;
+            $p['votes'] = (int)$p['votes'];
+            $p['voting_open'] = (int)($p['voting_open'] ?? 1);
+            $p['progress'] = (int)($p['progress'] ?? 0);
+            $p['statusLabel'] = status_label((string)$p['status']);
         }
         unset($p);
 
@@ -358,7 +359,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         )->fetchAll();
 
         foreach ($contractors as &$c) {
-            $c['id'] = (int) $c['id'];
+            $c['id'] = (int)$c['id'];
         }
         unset($c);
 
@@ -424,27 +425,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $projects = $stmt->fetchAll();
 
         foreach ($projects as &$p) {
-            $p['id']            = (int) $p['id'];
-            $p['budget']        = (float) $p['budget'];
-            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int) $p['beneficiaries'] : null;
-            $p['votes']         = (int) $p['votes'];
-            $p['progress']      = (int) ($p['progress'] ?? 0);
-            $p['statusLabel']   = status_label((string) $p['status']);
-            $p['supplier']      = $p['contractor_company'] ?: ($p['contractor_name'] ?: '');
-            $p['supervisor']    = $p['supervisor'] ?: '';
-            $p['start']         = $p['start_date'] ?: '';
-            $p['end']           = $p['target_date'] ?: '';
-            $p['report']        = $p['latest_progress_note'] ?: ($p['completion_report'] ?: '');
-            $p['result']        = $p['description'] ?: '';
+            $p['id'] = (int)$p['id'];
+            $p['budget'] = (float)$p['budget'];
+            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int)$p['beneficiaries'] : null;
+            $p['votes'] = (int)$p['votes'];
+            $p['progress'] = (int)($p['progress'] ?? 0);
+            $p['statusLabel'] = status_label((string)$p['status']);
+            $p['supplier'] = $p['contractor_company'] ?: ($p['contractor_name'] ?: '');
+            $p['supervisor'] = $p['supervisor'] ?: '';
+            $p['start'] = $p['start_date'] ?: '';
+            $p['end'] = $p['target_date'] ?: '';
+            $p['report'] = $p['latest_progress_note'] ?: ($p['completion_report'] ?: '');
+            $p['result'] = $p['description'] ?: '';
 
             if (!empty($p['alloc_amount'])) {
                 $p['allocation'] = [
-                    'amount'    => (float) $p['alloc_amount'],
-                    'source'    => $p['alloc_source'] ?? '',
-                    'ddo'       => $p['alloc_ddo'] ?? 'District Development Officer',
+                    'amount' => (float)$p['alloc_amount'],
+                    'source' => $p['alloc_source'] ?? '',
+                    'ddo' => $p['alloc_ddo'] ?? 'District Development Officer',
                     'reference' => $p['alloc_reference'] ?? '',
-                    'date'      => $p['alloc_date'] ?? '',
-                    'scope'     => $p['alloc_scope'] ?? '',
+                    'date' => $p['alloc_date'] ?? '',
+                    'scope' => $p['alloc_scope'] ?? '',
                 ];
             } else {
                 $p['allocation'] = null;
@@ -452,20 +453,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
             if (!empty($p['assignment_id'])) {
                 $p['assignment'] = [
-                    'id'                      => (int) $p['assignment_id'],
-                    'contractor_id'           => (int) $p['contractor_id'],
-                    'contractor_name'         => $p['contractor_name'],
-                    'contractor_company'      => $p['contractor_company'],
-                    'supervisor'              => $p['supervisor'],
-                    'scope'                   => $p['assignment_scope'],
-                    'start_date'              => $p['start_date'],
-                    'target_date'             => $p['target_date'],
-                    'status'                  => $p['assignment_status'],
-                    'completion_report'       => $p['completion_report'],
+                    'id' => (int)$p['assignment_id'],
+                    'contractor_id' => (int)$p['contractor_id'],
+                    'contractor_name' => $p['contractor_name'],
+                    'contractor_company' => $p['contractor_company'],
+                    'supervisor' => $p['supervisor'],
+                    'scope' => $p['assignment_scope'],
+                    'start_date' => $p['start_date'],
+                    'target_date' => $p['target_date'],
+                    'status' => $p['assignment_status'],
+                    'completion_report' => $p['completion_report'],
                     'completion_submitted_at' => $p['completion_submitted_at'],
-                    'completion_decision'     => $p['completion_decision'],
-                    'completion_decided_at'   => $p['completion_decided_at'],
-                    'assigned_date'           => $p['assigned_date'],
+                    'completion_decision' => $p['completion_decision'],
+                    'completion_decided_at' => $p['completion_decided_at'],
+                    'assigned_date' => $p['assigned_date'],
                 ];
             } else {
                 $p['assignment'] = null;
@@ -526,47 +527,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
               WHERE asgn.contractor_id = ?
            ORDER BY asgn.created_at DESC"
         );
-        $stmt->execute([(int) $me['id']]);
+        $stmt->execute([(int)$me['id']]);
         $projects = $stmt->fetchAll();
 
         foreach ($projects as &$p) {
-            $p['id']            = (int) $p['id'];
-            $p['budget']        = (float) $p['budget'];
-            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int) $p['beneficiaries'] : null;
-            $p['votes']         = (int) $p['votes'];
-            $p['progress']      = (int) ($p['progress'] ?? 0);
-            $p['statusLabel']   = status_label((string) $p['status']);
-            $p['start']         = $p['start_date'] ?: '';
-            $p['end']           = $p['target_date'] ?: '';
-            $p['report']        = $p['latest_progress_note'] ?: ($p['completion_report'] ?: '');
-            $p['result']        = $p['description'] ?: '';
+            $p['id'] = (int)$p['id'];
+            $p['budget'] = (float)$p['budget'];
+            $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int)$p['beneficiaries'] : null;
+            $p['votes'] = (int)$p['votes'];
+            $p['progress'] = (int)($p['progress'] ?? 0);
+            $p['statusLabel'] = status_label((string)$p['status']);
+            $p['start'] = $p['start_date'] ?: '';
+            $p['end'] = $p['target_date'] ?: '';
+            $p['report'] = $p['latest_progress_note'] ?: ($p['completion_report'] ?: '');
+            $p['result'] = $p['description'] ?: '';
 
             if (!empty($p['alloc_amount'])) {
                 $p['allocation'] = [
-                    'amount'    => (float) $p['alloc_amount'],
-                    'source'    => $p['alloc_source'] ?? '',
-                    'ddo'       => $p['alloc_ddo'] ?? 'District Development Officer',
+                    'amount' => (float)$p['alloc_amount'],
+                    'source' => $p['alloc_source'] ?? '',
+                    'ddo' => $p['alloc_ddo'] ?? 'District Development Officer',
                     'reference' => $p['alloc_reference'] ?? '',
-                    'date'      => $p['alloc_date'] ?? '',
-                    'scope'     => $p['alloc_scope'] ?? '',
+                    'date' => $p['alloc_date'] ?? '',
+                    'scope' => $p['alloc_scope'] ?? '',
                 ];
             } else {
                 $p['allocation'] = null;
             }
 
             $p['assignment'] = [
-                'id'                      => (int) $p['assignment_id'],
-                'contractor_id'           => (int) $p['contractor_id'],
-                'supervisor'              => $p['supervisor'],
-                'scope'                   => $p['assignment_scope'],
-                'start_date'              => $p['start_date'],
-                'target_date'             => $p['target_date'],
-                'status'                  => $p['assignment_status'],
-                'completion_report'       => $p['completion_report'],
+                'id' => (int)$p['assignment_id'],
+                'contractor_id' => (int)$p['contractor_id'],
+                'supervisor' => $p['supervisor'],
+                'scope' => $p['assignment_scope'],
+                'start_date' => $p['start_date'],
+                'target_date' => $p['target_date'],
+                'status' => $p['assignment_status'],
+                'completion_report' => $p['completion_report'],
                 'completion_submitted_at' => $p['completion_submitted_at'],
-                'completion_decision'     => $p['completion_decision'],
-                'completion_decided_at'   => $p['completion_decided_at'],
-                'assigned_date'           => $p['assigned_date'],
+                'completion_decision' => $p['completion_decision'],
+                'completion_decided_at' => $p['completion_decided_at'],
+                'assigned_date' => $p['assigned_date'],
             ];
         }
         unset($p);
@@ -578,10 +579,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $citizenConstId = null;
     if ($me['role'] === 'citizen') {
         $cpStmt = $pdo->prepare('SELECT constituency_id FROM citizen_profiles WHERE user_id = ?');
-        $cpStmt->execute([(int) $me['id']]);
+        $cpStmt->execute([(int)$me['id']]);
         $cpRow = $cpStmt->fetch();
         if ($cpRow) {
-            $citizenConstId = (int) $cpRow['constituency_id'];
+            $citizenConstId = (int)$cpRow['constituency_id'];
         }
     }
 
@@ -611,24 +612,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
        LEFT JOIN users u ON u.id = p.submitted_by";
 
     if ($citizenConstId !== null) {
-        $q .= " WHERE p.constituency_id = ?";
-        $stmt = $pdo->prepare($q . " ORDER BY p.created_at DESC");
-        $stmt->execute([(int) $me['id'], $citizenConstId]);
+        $q .= ' WHERE p.constituency_id = ?';
+        $stmt = $pdo->prepare($q . ' ORDER BY p.created_at DESC');
+        $stmt->execute([(int)$me['id'], $citizenConstId]);
     } else {
-        $stmt = $pdo->prepare($q . " ORDER BY p.created_at DESC");
-        $stmt->execute([(int) $me['id']]);
+        $stmt = $pdo->prepare($q . ' ORDER BY p.created_at DESC');
+        $stmt->execute([(int)$me['id']]);
     }
     $projects = $stmt->fetchAll();
 
     foreach ($projects as &$p) {
-        $p['id']            = (int) $p['id'];
-        $p['budget']        = (float) $p['budget'];
-        $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int) $p['beneficiaries'] : null;
-        $p['votes']         = (int) $p['votes'];
-        $p['user_voted']    = !empty($p['user_voted']);
-        $p['voting_open']   = (int) ($p['voting_open'] ?? 1);
-        $p['progress']      = (int) ($p['progress'] ?? 0);
-        $p['statusLabel']   = status_label((string) $p['status']);
+        $p['id'] = (int)$p['id'];
+        $p['budget'] = (float)$p['budget'];
+        $p['beneficiaries'] = $p['beneficiaries'] !== null ? (int)$p['beneficiaries'] : null;
+        $p['votes'] = (int)$p['votes'];
+        $p['user_voted'] = !empty($p['user_voted']);
+        $p['voting_open'] = (int)($p['voting_open'] ?? 1);
+        $p['progress'] = (int)($p['progress'] ?? 0);
+        $p['statusLabel'] = status_label((string)$p['status']);
     }
     unset($p);
 
@@ -646,13 +647,13 @@ if (!$me) {
 }
 
 $in = read_json();
-$action = trim((string) ($in['action'] ?? ''));
+$action = trim((string)($in['action'] ?? ''));
 
 /* ------------------------------------------------------------------ */
 /* Council Action: Start / Stop Voting for a Project                  */
 /* ------------------------------------------------------------------ */
 if ($me['role'] === 'council' && in_array($action, ['voting', 'start_voting', 'stop_voting', 'toggle_voting'], true)) {
-    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int) $in['project_id'] : 0;
+    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int)$in['project_id'] : 0;
     if ($projectId <= 0) {
         json_out(['ok' => false, 'error' => 'Valid project ID is required.'], 422);
     }
@@ -680,25 +681,25 @@ if ($me['role'] === 'council' && in_array($action, ['voting', 'start_voting', 's
     if ($votingOpen === 1) {
         $upd = $pdo->prepare('UPDATE projects SET voting_open = 1, voting_opens_at = COALESCE(voting_opens_at, CURDATE()), voting_closes_at = NULL WHERE id = ?');
         $upd->execute([$projectId]);
-        log_event((int) $me['id'], $me['email'], 'council_start_voting');
+        log_event((int)$me['id'], $me['email'], 'council_start_voting');
         $message = 'Voting has been started for this project.';
     } else {
         $upd = $pdo->prepare('UPDATE projects SET voting_open = 0, voting_closes_at = CURDATE() WHERE id = ?');
         $upd->execute([$projectId]);
-        log_event((int) $me['id'], $me['email'], 'council_stop_voting');
+        log_event((int)$me['id'], $me['email'], 'council_stop_voting');
         $message = 'Voting has been stopped for this project.';
     }
 
     $vStmt = $pdo->prepare('SELECT COUNT(*) FROM votes WHERE project_id = ?');
     $vStmt->execute([$projectId]);
-    $votes = (int) $vStmt->fetchColumn();
+    $votes = (int)$vStmt->fetchColumn();
 
     json_out([
-        'ok'          => true,
-        'message'     => $message,
-        'project_id'  => $projectId,
+        'ok' => true,
+        'message' => $message,
+        'project_id' => $projectId,
         'voting_open' => $votingOpen,
-        'votes'       => $votes,
+        'votes' => $votes,
     ]);
 }
 
@@ -712,14 +713,14 @@ if ($me['role'] === 'mp' || $action === 'decision' || $action === 'comment') {
 
     // Verify MP profile and constituency
     $mpStmt = $pdo->prepare('SELECT constituency_id FROM mp_profiles WHERE user_id = ?');
-    $mpStmt->execute([(int) $me['id']]);
+    $mpStmt->execute([(int)$me['id']]);
     $mpProfile = $mpStmt->fetch();
     if (!$mpProfile) {
         json_out(['ok' => false, 'error' => 'No parliamentary constituency linked to your account.'], 403);
     }
-    $constituencyId = (int) $mpProfile['constituency_id'];
+    $constituencyId = (int)$mpProfile['constituency_id'];
 
-    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int) $in['project_id'] : 0;
+    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int)$in['project_id'] : 0;
     if ($projectId <= 0) {
         json_out(['ok' => false, 'error' => 'Valid project ID is required.'], 422);
     }
@@ -732,37 +733,37 @@ if ($me['role'] === 'mp' || $action === 'decision' || $action === 'comment') {
     if (!$proj) {
         json_out(['ok' => false, 'error' => 'Project not found.'], 404);
     }
-    if ((int) $proj['constituency_id'] !== $constituencyId) {
+    if ((int)$proj['constituency_id'] !== $constituencyId) {
         json_out(['ok' => false, 'error' => 'You can only review projects within your constituency.'], 403);
     }
 
     if ($action === 'comment') {
-        $commentText = trim((string) ($in['text'] ?? ''));
+        $commentText = trim((string)($in['text'] ?? ''));
         if ($commentText === '' || text_len($commentText) > 2000) {
             json_out(['ok' => false, 'error' => 'Comment cannot be empty (up to 2000 characters).'], 422);
         }
 
         $insComment = $pdo->prepare('INSERT INTO project_comments (project_id, user_id, comment) VALUES (?, ?, ?)');
-        $insComment->execute([$projectId, (int) $me['id'], $commentText]);
+        $insComment->execute([$projectId, (int)$me['id'], $commentText]);
 
-        log_event((int) $me['id'], $me['email'], 'mp_project_comment');
+        log_event((int)$me['id'], $me['email'], 'mp_project_comment');
 
         json_out([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Comment added successfully.',
             'comment' => [
-                'id'     => (int) $pdo->lastInsertId(),
-                'text'   => $commentText,
+                'id' => (int)$pdo->lastInsertId(),
+                'text' => $commentText,
                 'author' => $me['full_name'],
-                'date'   => date('d M Y'),
+                'date' => date('d M Y'),
             ],
         ]);
     }
 
     if ($action === 'decision' || $action === 'status_change') {
-        $status  = trim((string) ($in['status'] ?? ($in['decision'] ?? '')));
-        $reason  = trim((string) ($in['reason'] ?? ''));
-        $comment = trim((string) ($in['comment'] ?? ''));
+        $status = trim((string)($in['status'] ?? ($in['decision'] ?? '')));
+        $reason = trim((string)($in['reason'] ?? ''));
+        $comment = trim((string)($in['comment'] ?? ''));
 
         $validStatuses = ['submitted', 'review', 'accepted', 'denied', 'progress', 'completed'];
         if (!in_array($status, $validStatuses, true)) {
@@ -782,7 +783,7 @@ if ($me['role'] === 'mp' || $action === 'decision' || $action === 'comment') {
                     decided_at = NOW()
               WHERE id = ?'
         );
-        $upd->execute([$status, $reason, (int) $me['id'], $projectId]);
+        $upd->execute([$status, $reason, (int)$me['id'], $projectId]);
 
         // If a comment was supplied, insert into project_comments
         if ($comment !== '') {
@@ -790,17 +791,17 @@ if ($me['role'] === 'mp' || $action === 'decision' || $action === 'comment') {
                 json_out(['ok' => false, 'error' => 'Comment must be 2000 characters or fewer.'], 422);
             }
             $insComment = $pdo->prepare('INSERT INTO project_comments (project_id, user_id, comment) VALUES (?, ?, ?)');
-            $insComment->execute([$projectId, (int) $me['id'], $comment]);
+            $insComment->execute([$projectId, (int)$me['id'], $comment]);
         }
 
-        log_event((int) $me['id'], $me['email'], 'mp_project_decision_' . $status);
+        log_event((int)$me['id'], $me['email'], 'mp_project_decision_' . $status);
 
         json_out([
-            'ok'          => true,
-            'message'     => 'Decision and reason recorded successfully.',
-            'status'      => $status,
+            'ok' => true,
+            'message' => 'Decision and reason recorded successfully.',
+            'status' => $status,
             'statusLabel' => status_label($status),
-            'reason'      => $reason,
+            'reason' => $reason,
         ]);
     }
 
@@ -811,7 +812,7 @@ if ($me['role'] === 'mp' || $action === 'decision' || $action === 'comment') {
 /* DDO Actions: Assign Contractor, Update Allocation                  */
 /* ------------------------------------------------------------------ */
 if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', 'allocate'], true)) {
-    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int) $in['project_id'] : 0;
+    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int)$in['project_id'] : 0;
     if ($projectId <= 0) {
         json_out(['ok' => false, 'error' => 'Valid project ID is required.'], 422);
     }
@@ -824,12 +825,12 @@ if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', '
     }
 
     if ($action === 'assign' || $action === 'assign_contractor') {
-        $contractorId = isset($in['contractor_id']) && is_numeric($in['contractor_id']) ? (int) $in['contractor_id'] : 0;
-        $supervisor   = trim((string) ($in['supervisor'] ?? ''));
-        $scope        = trim((string) ($in['scope'] ?? ''));
-        $startDate    = trim((string) ($in['start_date'] ?? ($in['start'] ?? '')));
-        $targetDate   = trim((string) ($in['target_date'] ?? ($in['end'] ?? '')));
-        $asgnStatus   = trim((string) ($in['status'] ?? 'assigned'));
+        $contractorId = isset($in['contractor_id']) && is_numeric($in['contractor_id']) ? (int)$in['contractor_id'] : 0;
+        $supervisor = trim((string)($in['supervisor'] ?? ''));
+        $scope = trim((string)($in['scope'] ?? ''));
+        $startDate = trim((string)($in['start_date'] ?? ($in['start'] ?? '')));
+        $targetDate = trim((string)($in['target_date'] ?? ($in['end'] ?? '')));
+        $asgnStatus = trim((string)($in['status'] ?? 'assigned'));
 
         if ($contractorId <= 0) {
             json_out(['ok' => false, 'error' => 'Please select an available contractor.'], 422);
@@ -837,10 +838,10 @@ if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', '
 
         // Verify contractor user exists, has role 'contractor', and status 'active'
         $cCheck = $pdo->prepare(
-            "SELECT u.id, u.full_name, u.status, r.slug AS role
+            'SELECT u.id, u.full_name, u.status, r.slug AS role
                FROM users u
                JOIN roles r ON r.id = u.role_id
-              WHERE u.id = ?"
+              WHERE u.id = ?'
         );
         $cCheck->execute([$contractorId]);
         $cUser = $cCheck->fetch();
@@ -856,8 +857,15 @@ if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', '
             $asgnStatus = 'assigned';
         }
 
-        $startDateVal  = $startDate !== '' ? $startDate : null;
+        $startDateVal = $startDate !== '' ? $startDate : null;
         $targetDateVal = $targetDate !== '' ? $targetDate : null;
+
+        // Only email when this is a new assignment or the contractor changed,
+        // not when the DDO just edits dates or status.
+        $prev = $pdo->prepare('SELECT contractor_id FROM assignments WHERE project_id = ?');
+        $prev->execute([$projectId]);
+        $prevContractorId = $prev->fetchColumn();   // false = no assignment yet
+        $isNewAssignment = ($prevContractorId === false || (int)$prevContractorId !== $contractorId);
 
         $upsert = $pdo->prepare(
             'INSERT INTO assignments (
@@ -876,7 +884,7 @@ if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', '
         $upsert->execute([
             $projectId,
             $contractorId,
-            (int) $me['id'],
+            (int)$me['id'],
             $supervisor ?: null,
             $scope ?: null,
             $startDateVal,
@@ -888,10 +896,20 @@ if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', '
             $pdo->prepare("UPDATE projects SET status = 'progress' WHERE id = ?")->execute([$projectId]);
         }
 
-        log_event((int) $me['id'], $me['email'], 'ddo_assign_contractor');
+        log_event((int)$me['id'], $me['email'], 'ddo_assign_contractor');
+
+        if ($isNewAssignment) {
+            notify_contractor_assigned($pdo, $projectId, $contractorId, [
+                'supervisor' => $supervisor,
+                'scope' => $scope,
+                'start_date' => $startDateVal ?? '',
+                'target_date' => $targetDateVal ?? '',
+                'assigned_by' => $me['full_name'],
+            ]);
+        }
 
         json_out([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Project successfully assigned to contractor.',
             'project_id' => $projectId,
             'contractor_id' => $contractorId,
@@ -903,24 +921,24 @@ if ($me['role'] === 'ddo' && in_array($action, ['assign', 'assign_contractor', '
 /* Contractor Actions: Submit Progress Update                         */
 /* ------------------------------------------------------------------ */
 if ($me['role'] === 'contractor' && in_array($action, ['progress', 'progress_update', 'update_progress'], true)) {
-    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int) $in['project_id'] : 0;
+    $projectId = isset($in['project_id']) && is_numeric($in['project_id']) ? (int)$in['project_id'] : 0;
     if ($projectId <= 0) {
         json_out(['ok' => false, 'error' => 'Valid project ID is required.'], 422);
     }
 
     // Verify assignment belongs to this contractor
     $asgnStmt = $pdo->prepare('SELECT id, status FROM assignments WHERE project_id = ? AND contractor_id = ?');
-    $asgnStmt->execute([$projectId, (int) $me['id']]);
+    $asgnStmt->execute([$projectId, (int)$me['id']]);
     $asgn = $asgnStmt->fetch();
 
     if (!$asgn) {
         json_out(['ok' => false, 'error' => 'You are not assigned to this project.'], 403);
     }
 
-    $assignmentId = (int) $asgn['id'];
-    $percentage   = isset($in['percentage']) && is_numeric($in['percentage']) ? (int) $in['percentage'] : (isset($in['progress']) && is_numeric($in['progress']) ? (int) $in['progress'] : null);
-    $note         = trim((string) ($in['note'] ?? ($in['report'] ?? '')));
-    $updateDate   = trim((string) ($in['update_date'] ?? ($in['date'] ?? '')));
+    $assignmentId = (int)$asgn['id'];
+    $percentage = isset($in['percentage']) && is_numeric($in['percentage']) ? (int)$in['percentage'] : (isset($in['progress']) && is_numeric($in['progress']) ? (int)$in['progress'] : null);
+    $note = trim((string)($in['note'] ?? ($in['report'] ?? '')));
+    $updateDate = trim((string)($in['update_date'] ?? ($in['date'] ?? '')));
 
     if ($percentage === null || $percentage < 0 || $percentage > 100) {
         json_out(['ok' => false, 'error' => 'Please provide a valid progress percentage between 0 and 100.'], 422);
@@ -936,7 +954,7 @@ if ($me['role'] === 'contractor' && in_array($action, ['progress', 'progress_upd
         'INSERT INTO progress_updates (assignment_id, percentage, note, update_date, created_by)
          VALUES (?, ?, ?, ?, ?)'
     );
-    $insProg->execute([$assignmentId, $percentage, $note, $updateDateVal, (int) $me['id']]);
+    $insProg->execute([$assignmentId, $percentage, $note, $updateDateVal, (int)$me['id']]);
 
     // Update project progress and status
     $newStatus = ($percentage >= 100) ? 'completed' : 'progress';
@@ -948,13 +966,13 @@ if ($me['role'] === 'contractor' && in_array($action, ['progress', 'progress_upd
     $pdo->prepare('UPDATE assignments SET status = ?, completion_report = COALESCE(?, completion_report) WHERE id = ?')
         ->execute([$asgnStatus, $percentage >= 100 ? $note : null, $assignmentId]);
 
-    log_event((int) $me['id'], $me['email'], 'contractor_progress_update');
+    log_event((int)$me['id'], $me['email'], 'contractor_progress_update');
 
     json_out([
-        'ok'          => true,
-        'message'     => 'Progress update saved successfully.',
-        'percentage'  => $percentage,
-        'status'      => $newStatus,
+        'ok' => true,
+        'message' => 'Progress update saved successfully.',
+        'percentage' => $percentage,
+        'status' => $newStatus,
         'statusLabel' => status_label($newStatus),
     ]);
 }
@@ -966,13 +984,13 @@ if ($me['role'] !== 'council') {
     json_out(['ok' => false, 'error' => 'Only District Council accounts may submit projects.'], 403);
 }
 
-$title         = trim((string) ($in['title'] ?? ''));
-$area          = trim((string) ($in['area'] ?? ''));
-$sector        = trim((string) ($in['sector'] ?? ''));
-$constituency  = trim((string) ($in['constituency'] ?? ''));
-$budgetRaw     = $in['budget'] ?? null;
+$title = trim((string)($in['title'] ?? ''));
+$area = trim((string)($in['area'] ?? ''));
+$sector = trim((string)($in['sector'] ?? ''));
+$constituency = trim((string)($in['constituency'] ?? ''));
+$budgetRaw = $in['budget'] ?? null;
 $beneficiaries = $in['beneficiaries'] ?? null;
-$description   = trim((string) ($in['description'] ?? ''));
+$description = trim((string)($in['description'] ?? ''));
 
 $validSectors = ['Water', 'Education', 'Health', 'Roads', 'Agriculture', 'Markets', 'Energy', 'Community'];
 
@@ -991,25 +1009,25 @@ if ($constituency === '') {
 
 // Find constituency by code or id
 $cStmt = $pdo->prepare('SELECT id, code, district FROM constituencies WHERE code = ? OR id = ? LIMIT 1');
-$cStmt->execute([$constituency, is_numeric($constituency) ? (int) $constituency : 0]);
+$cStmt->execute([$constituency, is_numeric($constituency) ? (int)$constituency : 0]);
 $cRow = $cStmt->fetch();
 
 if (!$cRow) {
     json_out(['ok' => false, 'error' => 'Unknown constituency selected.'], 422);
 }
-$constituencyId = (int) $cRow['id'];
+$constituencyId = (int)$cRow['id'];
 
-if (!is_numeric($budgetRaw) || (float) $budgetRaw <= 0) {
+if (!is_numeric($budgetRaw) || (float)$budgetRaw <= 0) {
     json_out(['ok' => false, 'error' => 'Please enter a valid estimated budget.'], 422);
 }
-$budget = round((float) $budgetRaw, 2);
+$budget = round((float)$budgetRaw, 2);
 
 $beneficiariesVal = null;
 if ($beneficiaries !== null && $beneficiaries !== '') {
-    if (!is_numeric($beneficiaries) || (int) $beneficiaries < 1) {
+    if (!is_numeric($beneficiaries) || (int)$beneficiaries < 1) {
         json_out(['ok' => false, 'error' => 'Beneficiaries must be a positive whole number.'], 422);
     }
-    $beneficiariesVal = (int) $beneficiaries;
+    $beneficiariesVal = (int)$beneficiaries;
 }
 
 if ($description === '' || text_len($description) > 5000) {
@@ -1053,15 +1071,15 @@ $insert->execute([
     $beneficiariesVal,
     $description,
     $constituencyId,
-    (int) $me['id']
+    (int)$me['id']
 ]);
 
-$newId = (int) $pdo->lastInsertId();
+$newId = (int)$pdo->lastInsertId();
 
-log_event((int) $me['id'], $me['email'], 'project_submitted');
+log_event((int)$me['id'], $me['email'], 'project_submitted');
 
 json_out([
-    'ok'        => true,
-    'id'        => $newId,
+    'ok' => true,
+    'id' => $newId,
     'reference' => $referenceNo,
 ], 201);
