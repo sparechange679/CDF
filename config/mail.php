@@ -8,7 +8,7 @@
 // Master switch. false = emails are only recorded in the notification table (status "queued").
 define('MAIL_ENABLED', filter_var(getenv('CDF_MAIL_ENABLED') ?: 'true', FILTER_VALIDATE_BOOLEAN));
 
-define('MAIL_HOST',       getenv('CDF_MAIL_HOST') ?: '');
+define('MAIL_HOST',       getenv('CDF_MAIL_HOST') ?: 'smtp.gmail.com');
 define('MAIL_PORT',  (int)(getenv('CDF_MAIL_PORT') ?: 2525));
 define('MAIL_USERNAME',   getenv('CDF_MAIL_USER') ?: 'blessingskishindosabuni@gmail.com');
 define('MAIL_PASSWORD',   getenv('CDF_MAIL_PASS') ?: 'nulm qsvl ebko olfu');
