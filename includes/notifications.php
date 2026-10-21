@@ -335,3 +335,196 @@ function notify_quotation_event(PDO $pdo, int $projectId, string $event): void
         error_log('notify_quotation_event failed: ' . $e->getMessage());
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* Generic helper + remaining events                                   */
+/* ------------------------------------------------------------------ */
+
+function notify_simple(?int   $uid, string $email, string $name, string $type, string $subject,
+                       string $heading, string $intro, array $rows = [], ?string $link = null, string $btn = 'Open'): bool
+{
+    $text = "Hello {$name},\n\n{$intro}\n\n";
+    foreach ($rows as $k => $v) {
+        if ($v !== null && $v !== '') {
+            $text .= "$k: $v\n";
+        }
+    }
+    if ($link) {
+        $text .= "\n{$link}\n";
+    }
+
+    $html = email_layout(
+        $heading,
+        '<p style="margin:0 0 4px">Hello ' . mail_esc($name) . ',</p><p style="margin:0">' . nl2br(mail_esc($intro)) . '</p>'
+        . email_details($rows) . ($link ? email_button($link, $btn) : '')
+    );
+    return send_notification($uid, $email, $type, $subject, $text, $html);
+}
+
+/** Welcome email; staff roles that need approval get the "waiting" version. */
+function notify_registration(PDO $pdo, int $userId, string $role, string $name, string $email, bool $pending): void
+{
+    try {
+        $roleName = (string)$pdo->query('SELECT name FROM roles WHERE slug = ' . $pdo->quote($role))->fetchColumn();
+        $login = APP_URL . ($role === 'citizen' ? '/login.php' : '/auth.php');
+
+        if ($pending) {
+            notify_simple($userId, $email, $name, 'registration_pending', 'Your CDF account is waiting for approval',
+                'Account received',
+                "Thank you for registering as {$roleName}. Your account must be approved by the District Development Officer before you can sign in. You will get another email as soon as it is approved.",
+                ['Role' => $roleName, 'Email' => $email]);
+        } else {
+            notify_simple($userId, $email, $name, 'registration_welcome', 'Welcome to the CDF Malawi portal',
+                'Welcome',
+                "Your {$roleName} account has been created and is ready to use.",
+                ['Role' => $roleName, 'Email' => $email], $login, 'Sign in');
+        }
+    } catch (Throwable $e) {
+        error_log('notify_registration failed: ' . $e->getMessage());
+    }
+}
+
+/** $event: approved | reactivated | suspended */
+function notify_account_status(PDO $pdo, int $userId, string $event): void
+{
+    try {
+        $st = $pdo->prepare('SELECT u.full_name, u.email, r.slug, r.name AS role_name
+                               FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = ?');
+        $st->execute([$userId]);
+        $u = $st->fetch();
+        if (!$u) {
+            return;
+        }
+
+        $login = APP_URL . ($u['slug'] === 'citizen' ? '/login.php' : '/auth.php');
+        $copy = [
+            'approved' => ['Your CDF account has been approved', 'Account approved',
+                "Your {$u['role_name']} account has been approved. You can now sign in.", $login],
+            'reactivated' => ['Your CDF account has been restored', 'Account restored',
+                'Your account access has been restored. You can sign in again.', $login],
+            'suspended' => ['Your CDF account has been suspended', 'Account suspended',
+                'Your account has been suspended and you have been signed out. Please contact the district office if you think this is a mistake.', null],
+        ][$event] ?? null;
+        if (!$copy) {
+            return;
+        }
+
+        notify_simple($userId, (string)$u['email'], (string)$u['full_name'], 'account_' . $event,
+            $copy[0], $copy[1], $copy[2], [], $copy[3], 'Sign in');
+    } catch (Throwable $e) {
+        error_log('notify_account_status failed: ' . $e->getMessage());
+    }
+}
+
+/** MP decision -> the council account that submitted the project. */
+function notify_project_decision(PDO $pdo, int $projectId, string $status, string $reason, string $comment, string $mpName): void
+{
+    try {
+        $st = $pdo->prepare('SELECT p.title, p.reference_no, u.id AS uid, u.full_name, u.email
+                               FROM projects p JOIN users u ON u.id = p.submitted_by WHERE p.id = ?');
+        $st->execute([$projectId]);
+        $p = $st->fetch();
+        if (!$p) {
+            return;
+        }
+
+        $label = ['accepted' => 'approved', 'denied' => 'rejected', 'review' => 'put under review',
+            'progress' => 'moved to implementation', 'submitted' => 'returned to submitted'][$status] ?? $status;
+
+        notify_simple((int)$p['uid'], (string)$p['email'], (string)$p['full_name'], 'proposal_' . $status,
+            'Proposal ' . $label . ': ' . $p['title'], 'Proposal ' . $label,
+            "The Member of Parliament has {$label} your proposal.",
+            ['Project' => $p['title'], 'Reference' => $p['reference_no'], 'Decision' => ucfirst($label),
+                'Reason' => $reason, 'Comment' => $comment, 'Decided by' => $mpName],
+            APP_URL . '/vdc/projects.php', 'Open my projects');
+    } catch (Throwable $e) {
+        error_log('notify_project_decision failed: ' . $e->getMessage());
+    }
+}
+
+/** DDO who assigned the project; falls back to every active DDO. */
+function notify_ddo_recipients(PDO $pdo, int $projectId): array
+{
+    $st = $pdo->prepare("SELECT u.id, u.full_name, u.email FROM assignments a
+                           JOIN users u ON u.id = a.assigned_by
+                          WHERE a.project_id = ? AND u.status = 'active'");
+    $st->execute([$projectId]);
+    $rows = $st->fetchAll();
+    if (!$rows) {
+        $rows = $pdo->query("SELECT u.id, u.full_name, u.email FROM users u JOIN roles r ON r.id = u.role_id
+                              WHERE r.slug = 'ddo' AND u.status = 'active'")->fetchAll();
+    }
+    return $rows;
+}
+
+/** Contractor posted a progress update -> DDO. */
+function notify_progress_update(PDO $pdo, int $projectId, int $percentage, string $note, string $contractorName, string $date): void
+{
+    try {
+        $t = $pdo->prepare('SELECT title, reference_no FROM projects WHERE id = ?');
+        $t->execute([$projectId]);
+        $p = $t->fetch();
+        if (!$p) {
+            return;
+        }
+
+        foreach (notify_ddo_recipients($pdo, $projectId) as $d) {
+            notify_simple((int)$d['id'], (string)$d['email'], (string)$d['full_name'], 'progress_update',
+                'Progress update (' . $percentage . '%): ' . $p['title'], 'New progress update',
+                "{$contractorName} has posted a progress update.",
+                ['Project' => $p['title'], 'Reference' => $p['reference_no'], 'Progress' => $percentage . '%',
+                    'Date' => $date, 'Note' => $note],
+                APP_URL . '/ddo/project.php?id=' . $projectId, 'Open project');
+        }
+    } catch (Throwable $e) {
+        error_log('notify_progress_update failed: ' . $e->getMessage());
+    }
+}
+
+/** Project reached completion -> MP of the constituency, council submitter and DDO. */
+function notify_project_completed(PDO $pdo, int $projectId): void
+{
+    try {
+        $st = $pdo->prepare('SELECT title, reference_no, constituency_id, submitted_by FROM projects WHERE id = ?');
+        $st->execute([$projectId]);
+        $p = $st->fetch();
+        if (!$p) {
+            return;
+        }
+
+        $to = [];   // keyed by email so nobody gets it twice: [email => [id, name, link]]
+
+        $mp = $pdo->prepare("SELECT u.id, u.full_name, u.email FROM mp_profiles m JOIN users u ON u.id = m.user_id
+                              WHERE m.constituency_id = ? AND u.status = 'active'");
+        $mp->execute([(int)$p['constituency_id']]);
+        foreach ($mp->fetchAll() as $u) {
+            $to[$u['email']] = [(int)$u['id'], $u['full_name'], APP_URL . '/mp/review.php?id=' . $projectId];
+        }
+        if ($p['submitted_by']) {
+            $c = $pdo->prepare("SELECT id, full_name, email FROM users WHERE id = ? AND status = 'active'");
+            $c->execute([(int)$p['submitted_by']]);
+            if ($u = $c->fetch()) {
+                $to[$u['email']] = [(int)$u['id'], $u['full_name'], APP_URL . '/vdc/projects.php'];
+            }
+        }
+        foreach (notify_ddo_recipients($pdo, $projectId) as $u) {
+            $to[$u['email']] = [(int)$u['id'], $u['full_name'], APP_URL . '/ddo/project.php?id=' . $projectId];
+        }
+
+        foreach ($to as $email => [$id, $name, $link]) {
+            notify_simple($id, (string)$email, (string)$name, 'project_completed',
+                'Project completed: ' . $p['title'], 'Project completed',
+                'This Constituency Development Fund project has reached 100% and is marked completed.',
+                ['Project' => $p['title'], 'Reference' => $p['reference_no']], $link, 'Open project');
+        }
+    } catch (Throwable $e) {
+        error_log('notify_project_completed failed: ' . $e->getMessage());
+    }
+}
+
+function notify_password_reset(?int $userId, string $email, string $name, string $link): bool
+{
+    return notify_simple($userId, $email, $name, 'password_reset', 'Reset your CDF password', 'Password reset',
+        'We received a request to reset your password. The link below works for 1 hour. If you did not ask for this, ignore this email and your password stays the same.',
+        [], $link, 'Choose a new password');
+}

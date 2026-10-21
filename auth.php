@@ -236,7 +236,7 @@
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between">
                                         <label class="form-label fw-medium" for="loginPw">Password</label>
-                                        <a href="#" class="text-link small">Forgot password?</a>
+                                        <a href="/cdf/forgot_password.php" class="text-link small">Forgot password?</a>
                                     </div>
                                     <div class="pw-field">
                                         <input type="password" class="form-control" id="loginPw" required autocomplete="current-password">

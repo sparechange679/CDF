@@ -796,6 +796,12 @@ if ($me['role'] === 'mp' || $action === 'decision' || $action === 'comment') {
 
         log_event((int)$me['id'], $me['email'], 'mp_project_decision_' . $status);
 
+        if ($status === 'completed') {
+            notify_project_completed($pdo, $projectId);
+        } else {
+            notify_project_decision($pdo, $projectId, $status, $reason, $comment, $me['full_name']);
+        }
+
         json_out([
             'ok' => true,
             'message' => 'Decision and reason recorded successfully.',
@@ -959,6 +965,8 @@ if ($me['role'] === 'contractor' && in_array($action, ['progress', 'progress_upd
     // Update project progress and status
     $newStatus = ($percentage >= 100) ? 'completed' : 'progress';
     $asgnStatus = ($percentage >= 100) ? 'completed' : 'active';
+    $wasCompleted = ($proj0 = $pdo->prepare('SELECT status FROM projects WHERE id = ?'))
+        && $proj0->execute([$projectId]) && $proj0->fetchColumn() === 'completed';
 
     $pdo->prepare('UPDATE projects SET progress = ?, status = ? WHERE id = ?')
         ->execute([$percentage, $newStatus, $projectId]);
@@ -967,6 +975,11 @@ if ($me['role'] === 'contractor' && in_array($action, ['progress', 'progress_upd
         ->execute([$asgnStatus, $percentage >= 100 ? $note : null, $assignmentId]);
 
     log_event((int)$me['id'], $me['email'], 'contractor_progress_update');
+
+    notify_progress_update($pdo, $projectId, $percentage, $note, $me['full_name'], $updateDateVal);
+    if ($percentage >= 100 && !$wasCompleted) {
+        notify_project_completed($pdo, $projectId);
+    }
 
     json_out([
         'ok' => true,

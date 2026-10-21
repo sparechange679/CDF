@@ -11,6 +11,8 @@
 use JetBrains\PhpStorm\NoReturn;
 
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/notifications.php';
+
 require_post_with_csrf();
 
 $in       = read_json();
@@ -121,6 +123,8 @@ try {
 }
 
 log_event($userId, $email, 'register');
+
+notify_registration($pdo, $userId, $role, $name, $email, $needsApproval);
 
 /* ---- Active accounts go straight to their dashboard ---- */
 if ($status === 'active') {

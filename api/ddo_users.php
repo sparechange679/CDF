@@ -13,6 +13,7 @@
 // Only a signed-in District Development Officer can use this endpoint.
 // Citizens are not listed or managed here.
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 $me = current_user();
 if (!$me) {
@@ -109,5 +110,10 @@ if ($action === 'activate') {
     $pdo->prepare('DELETE FROM remember_tokens WHERE user_id = ?')->execute([$id]);
     log_event((int) $me['id'], $target['email'], 'account_suspended');
 }
+
+notify_account_status(
+    $pdo, $id,
+    $new === 'suspended' ? 'suspended' : ($target['status'] === 'pending' ? 'approved' : 'reactivated')
+);
 
 json_out(['ok' => true, 'id' => $id, 'status' => $new]);
